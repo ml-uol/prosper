@@ -9,10 +9,12 @@ Ternary Sparse Coding (TSC) [5] models. All these probabilistic generative model
 are trained using a truncated Expectation Maximization (EM) algorithm [6].
 
 
-== Dependencies ==
-
- * NumPy
- * SciPy
+== Software dependencies ==
+ 
+ * Python (>= 2.6)
+ * NumPy (reasonably recent)
+ * SciPy (reasonably recent)
+ * pytables (reasonably recent)
  * mpi4py (>= 1.3)
 
 == Overview ==
@@ -26,14 +28,6 @@ examples/   - Small example programs for the ulp library
 
 
 
-== Software dependencies ==
- 
- * Python (>= 2.6)
- * NumPy (reasonably recent)
- * SciPy (reasonably recent)
- * pytables (reasonably recent)
- * mpi4py (>= 1.2)
- 
 == Running ==
 
 To run some toy examples:
