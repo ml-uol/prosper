@@ -20,11 +20,10 @@ are trained using a truncated Expectation Maximization (EM) algorithm [6].
 == Overview ==
 
 pulp/       - Python library/framework for MPI parallelized 
-               EM-based algorithms. The MCA implementation
-               can be found in pulp/em/camodels/mmca_et.py, the 
-               BSC implementation in pulp/em/camodels/bsc_et.py.
+              EM-based algorithms. The models' implementations
+              can be found in pulp/em/camodels/.
 
-examples/   - Small example programs for the ulp library
+examples/   - Small examples for initializing and running the models
 
 
 
@@ -69,6 +68,8 @@ b) On a cluster:
 See your MPI documentation for the details on how to start MPI parallelized 
 programs.
 
+
+== References ==
 
 [1] M. Henniges, G. Puertas, J. Bornschein, J. Eggert, and J. Lücke (2010).
 Binary Sparse Coding.
