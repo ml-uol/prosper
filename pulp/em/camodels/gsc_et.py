@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  Author:   Abdul-Saboor Sheikh <sheikh@fias.uni-frankfurt.de)
+#  Author:   Abdul-Saboor Sheikh <sheikh@tu-berlin.de)
 #  Lincense: Academic Free License (AFL) v3.0
 #
 # Reference: Sheikh, A. S., Shelton, J. A., & Luecke, J. 
