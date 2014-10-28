@@ -280,9 +280,6 @@ class GSC(CAModel):
                 cur_y = cur_y[:,None]
         cur_N, _ = cur_y.shape
         
-        # to store and return truncated log-posterior
-        logpj = np.empty( [cur_N, self.no_states] )
-
         tiny = np.finfo(np.float64).tiny
         
         cur_comps = my_data['candidates']
@@ -291,8 +288,7 @@ class GSC(CAModel):
         cur_psi_sq = (model_params['psi_sq'][cur_comps,:])[:,cur_comps]
         cur_y = my_data['y']
         
-        pies = np.array(model_params['pi'], dtype=self.dtype_precision)
-        one_m_pies = 1.0 - np.array(model_params['pi'], dtype=self.dtype_precision)
+        log_pi_pr = np.log(model_params['pi']) - np.log(1 - np.array(model_params['pi']))
 
         # to accumulate posterior probabilities per data point in the current data cluster
         post_nfac_n = np.zeros([cur_N], dtype=self.dtype_precision)
@@ -352,10 +348,8 @@ class GSC(CAModel):
             on_comps_ind = np.zeros(self.H, dtype=np.int)
             on_comps_ind[actual_comps_inds] = 1
             
-            prob_s = np.sum(np.log(pies[actual_comps_inds])) + np.sum(np.log(one_m_pies[on_comps_ind==0]))
-
-            logpj[:,state_ind] = (post_s + prob_s) * beta
-
+            prob_s = np.sum(log_pi_pr[actual_comps_inds])
+            
             # convert the log-probability to actual probability
             post_s = np.exp((post_s + prob_s) * beta) 
             post_s[np.isnan(post_s)] = tiny
@@ -399,7 +393,7 @@ class GSC(CAModel):
             pstr_szsz += kappa_sq_s_n_temp
         
        
-        suff_stats = { 'pstr_s': pstr_s, 'pstr_ss': pstr_ss, 'pstr_sz': pstr_sz, 'pstr_szsz': pstr_szsz, 'post_nfac_n': post_nfac_n, 'logpj': logpj }
+        suff_stats = { 'pstr_s': pstr_s, 'pstr_ss': pstr_ss, 'pstr_sz': pstr_sz, 'pstr_szsz': pstr_szsz, 'post_nfac_n': post_nfac_n }
 
         return suff_stats
 
@@ -443,9 +437,7 @@ class GSC(CAModel):
         xpt_sz = np.empty([my_N, H])
         xpt_szsz = np.empty([my_N, H, H])
 
-        # to store and return truncated log-posterior
-        logpj = np.empty( [my_N, 1+H+self.no_states] )
-
+        
         tiny = np.finfo(np.float64).tiny
         
         
@@ -463,8 +455,7 @@ class GSC(CAModel):
                         
             cur_N, D = cur_y.shape
 
-            pies = np.array(model_params['pi'], dtype=self.dtype_precision)
-            one_m_pies = 1.0 - np.array(model_params['pi'], dtype=self.dtype_precision)
+            log_pi_pr = np.log(model_params['pi']) - np.log(1 - np.array(model_params['pi']))
 
             # to accumulate posterior probabilities per data point in the current data cluster
             post_nfac_n = np.zeros([cur_N], dtype=self.dtype_precision)
@@ -477,11 +468,8 @@ class GSC(CAModel):
             ################################## Calc prob of null state #########################################
 
             post_s = - np.sum(np.array(self.dtype_precision(cur_y) * np.matrix(B)) * cur_y,1)
-            prob_s = np.sum(np.log(one_m_pies))
-
-            logpj[y_inds,0] = (post_s + prob_s) * beta
-
-            post_s = np.exp((post_s + prob_s) * beta) 
+            
+            post_s = np.exp(post_s * beta) 
 
             post_nfac_n += post_s
 
@@ -525,11 +513,9 @@ class GSC(CAModel):
                 on_comps_ind = np.zeros(H, dtype=np.int)
                 on_comps_ind[cur_h] = 1
            
-                prob_s = np.sum(np.log(pies[cur_h] )) + np.sum(np.log(one_m_pies[on_comps_ind==0] ))
-
+                prob_s = np.sum(log_pi_pr[cur_h])
+           
                 post_s = np.exp((post_s + prob_s) * beta) 
-
-                logpj[y_inds,cur_h+1] = (post_s + prob_s) * beta
 
                 # convert the log-probability to actual probability   
                 post_s[np.isnan(post_s)] = tiny
@@ -572,8 +558,6 @@ class GSC(CAModel):
             pstr_szsz += cur_suff_stats['pstr_szsz']
 
             post_nfac_n += cur_suff_stats['post_nfac_n']
-
-            logpj[y_inds,-self.no_states:] = cur_suff_stats['logpj']
             
             ####################################################################################################
    
@@ -591,7 +575,7 @@ class GSC(CAModel):
         del model_params['sigma_sq_inv']
         del model_params['B']
 
-        suff_stats = { 'xpt_s': xpt_s, 'xpt_ss': xpt_ss, 'xpt_sz': xpt_sz, 'xpt_szsz': xpt_szsz, 'logpj': logpj }
+        suff_stats = { 'xpt_s': xpt_s, 'xpt_ss': xpt_ss, 'xpt_sz': xpt_sz, 'xpt_szsz': xpt_szsz }
 
         return suff_stats
         
@@ -777,9 +761,6 @@ class GSC(CAModel):
         
         my_N, D = my_y.shape
         N = comm.allreduce(my_N) 
-        
-        pies = np.array(model_params['pi'])
-        one_m_pies = 1 - np.array(model_params['pi'])
 
         log_tiny = np.finfo(np.float64).min
 
