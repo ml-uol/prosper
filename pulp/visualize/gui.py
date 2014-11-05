@@ -14,7 +14,8 @@ from os import mkdir, environ
 # Make sure only MPI rank 0 imports GUI libraries...
 if MPI.COMM_WORLD.rank == 0:
     import matplotlib as mpl
-    mpl.use('GTKAgg')
+    #mpl.use('GTK')
+    mpl.use('TkAgg')
 
     from matplotlib import pyplot
     import pylab as pl
