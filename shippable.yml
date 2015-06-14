@@ -1,0 +1,18 @@
+# language setting
+build_image: shippableimages/ubuntu1404_python
+
+language: python
+
+python:
+    - "2.7"
+
+before_install:
+    - shippable_retry apt-get update
+    - shippable_retry apt-get install -y gfortran libatlas-dev openmpi-bin libopenmpi-dev libfreetype6-dev libpng12-dev pkg-config
+    - shippable_retry apt-get install -y python-numpy python-scipy python-h5py python-tables cython
+    - virtualenv --system-site-packages -p /usr/bin/python$VIRTUALENV_PYTHON $HOME/new_ve
+    - . $HOME/new_ve/bin/activate
+
+install: "pip install -r requirements.txt --use-mirrors"
+
+script: nosetests -v
