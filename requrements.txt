@@ -1,4 +1,0 @@
-numpy
-scipy
-nosetests2
-mpi4py
