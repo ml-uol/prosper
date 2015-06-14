@@ -15,4 +15,4 @@ before_install:
 
 install: "pip install -r requirements.txt --use-mirrors"
 
-script: nosetests -v
+script: nosetests -v pulp
