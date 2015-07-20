@@ -1,6 +1,6 @@
 
 [![Build Status](https://api.shippable.com/projects/557d9b07edd7f2c052156f39/badge?branchName=master)](https://app.shippable.com/projects/557d9b07edd7f2c052156f39/builds/latest)
-[![Documentation](https://readthedocs.org/projects/parallel-em/badge/?version=latest)](https://readthedocs.org/projects/parallel-em/?badge=latest)
+[![Documentation](https://readthedocs.org/projects/parallel-em/badge/?version=latest)](http://parallel-em.readthedocs.org/en/latest/)
 
 Introduction
 ============
