@@ -7,7 +7,7 @@ from __future__ import division
 
 import numpy as np
 from math import pi
-from scipy import comb
+from scipy.misc import comb
 from mpi4py import MPI
 
 import pulp.em as em
