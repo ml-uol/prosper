@@ -4,10 +4,10 @@
 
 from __future__ import division
 
-import sys 
+import sys
 import os
 import numpy as np
-from mpi4py import MPI 
+from mpi4py import MPI
 
 #=============================================================================
 # Parallel & pretty printer
@@ -31,14 +31,15 @@ def pprint(obj="", comm=MPI.COMM_WORLD, end='\n'):
     (comm.rank != 0) return without doing enything.
     """
     if comm.rank != 0:
-        return 
+        return
 
     if isinstance(obj, str):
-        sys.stdout.write(obj+end)
+        sys.stdout.write(obj + end)
     else:
         sys.stdout.write(repr(obj))
         sys.stdout.write(end)
         sys.stdout.flush()
+
 
 def stride_data(N, balanced=False, comm=MPI.COMM_WORLD):
     """ Stride data 
@@ -68,21 +69,26 @@ def stride_data(N, balanced=False, comm=MPI.COMM_WORLD):
 
     if balanced:
         first = my_N * comm.rank
-        last  = my_N * (comm.rank+1)
+        last = my_N * (comm.rank + 1)
         return first, last
     else:
         if comm.rank < residue:
-            size = my_N+1
-            first = size*comm.rank
-            last  = first+size 
+            size = my_N + 1
+            first = size * comm.rank
+            last = first + size
         else:
             size = my_N
-            first = size*comm.rank+residue
-            last = first+size
+            first = size * comm.rank + residue
+            last = first + size
 
     return first, last
 
-def allsort(my_array, axis=-1, kind='quicksort', order=None, comm=MPI.COMM_WORLD):
+
+def allsort(my_array,
+            axis=-1,
+            kind='quicksort',
+            order=None,
+            comm=MPI.COMM_WORLD):
     """
     Parallel (collective) version of numpy.sort
     """
@@ -91,7 +97,8 @@ def allsort(my_array, axis=-1, kind='quicksort', order=None, comm=MPI.COMM_WORLD
     all_shape[axis] = comm.allreduce(shape[axis])
 
     if not my_array.dtype in typemap:
-        raise TypeError("Dont know how to handle arrays of type %s" % my_array.dtype)
+        raise TypeError("Dont know how to handle arrays of type %s" %
+                        my_array.dtype)
     mpi_type = typemap[my_array.dtype]
 
     my_sorted = np.sort(my_array, axis, kind, order)
@@ -102,7 +109,12 @@ def allsort(my_array, axis=-1, kind='quicksort', order=None, comm=MPI.COMM_WORLD
     all_sorted = np.sort(all_array, axis, 'mergesort', order)
     return all_sorted
 
-def allargsort(my_array, axis=-1, kind='quicksort', order=None, comm=MPI.COMM_WORLD):
+
+def allargsort(my_array,
+               axis=-1,
+               kind='quicksort',
+               order=None,
+               comm=MPI.COMM_WORLD):
     """ Parallel (collective) version of numpy.argsort
     """
     shape = my_array.shape
@@ -110,7 +122,8 @@ def allargsort(my_array, axis=-1, kind='quicksort', order=None, comm=MPI.COMM_WO
     all_shape[axis] = comm.allreduce(shape[axis])
 
     if not my_array.dtype in typemap:
-        raise TypeError("Dont know how to handle arrays of type %s" % my_array.dtype)
+        raise TypeError("Dont know how to handle arrays of type %s" %
+                        my_array.dtype)
     mpi_type = typemap[my_array.dtype]
 
     my_sorted = np.argsort(my_array, axis, kind, order)
@@ -120,6 +133,7 @@ def allargsort(my_array, axis=-1, kind='quicksort', order=None, comm=MPI.COMM_WO
 
     all_sorted = np.argsort(all_array, axis, kind, order)
     return all_sorted
+
 
 def allmean(my_a, axis=None, dtype=None, out=None, comm=MPI.COMM_WORLD):
     """ Parallel (collective) version of numpy.mean
@@ -134,11 +148,13 @@ def allmean(my_a, axis=None, dtype=None, out=None, comm=MPI.COMM_WORLD):
 
     if my_sum is np.ndarray:
         sum = np.empty_like(my_sum)
-        comm.Allreduce( (my_sum, typemap[my_sum.dtype]), (sum, typemap[sum.dtype]))
+        comm.Allreduce((my_sum, typemap[my_sum.dtype]),
+                       (sum, typemap[sum.dtype]))
         sum /= N
         return sum
     else:
         return comm.allreduce(my_sum) / N
+
 
 def allsum(my_a, axis=None, dtype=None, out=None, comm=MPI.COMM_WORLD):
     """ Parallel (collective) version of numpy.sum
@@ -147,8 +163,8 @@ def allsum(my_a, axis=None, dtype=None, out=None, comm=MPI.COMM_WORLD):
 
     if my_sum is np.ndarray:
         sum = np.empty_like(my_sum)
-        comm.Allreduce( (my_sum, typemap[my_sum.dtype]), (sum, typemap[sum.dtype]))
+        comm.Allreduce((my_sum, typemap[my_sum.dtype]),
+                       (sum, typemap[sum.dtype]))
         return sum
     else:
         return comm.allreduce(my_sum)
-

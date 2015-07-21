@@ -2,7 +2,6 @@
 #  Author:   Jorg Bornschein <bornschein@fias.uni-frankfurt.de)
 #  Lincense: Academic Free License (AFL) v3.0
 #
-
 """
 
 """
@@ -24,10 +23,11 @@ comm = MPI.COMM_WORLD
 #=============================================================================
 # DataHandler (AbstractBaseClass)
 
+
 class DataHandler(object):
     __metaclass__ = ABCMeta
-
     """ Base class for handler which can be set to handle incoming data by DataLog."""
+
     def __init__(self):
         pass
 
@@ -38,7 +38,7 @@ class DataHandler(object):
     @abstractmethod
     def append(self, tblname, value):
         pass
-    
+
     def append_all(self, valdict):
         for key, val in valdict.items():
             self.append(key, val)
@@ -49,13 +49,13 @@ class DataHandler(object):
     def close(self):
         pass
 
-
-
 #=============================================================================
 # GUIDataHandler (AbstractBaseClass)
 
+
 class GUIDataHandler(DataHandler):
     __metaclass__ = ABCMeta
+
 
 class GUIProxyHandler(DataHandler):
     def __init__(self, gui_queue, vizid):
@@ -80,22 +80,16 @@ class GUIProxyHandler(DataHandler):
         self.gui_queue.put(packet)
 
     def close(self):
-        packet = {
-            'cmd': 'close',
-            'vizid': self.vizid,
-        }
+        packet = {'cmd': 'close', 'vizid': self.vizid, }
         self.gui_queue.put(packet)
-    
+
     def register(self, tblname):
-        packet = {
-            'cmd': 'register',
-            'vizid': self.vizid,
-            'tblname': tblname,
-        }
+        packet = {'cmd': 'register', 'vizid': self.vizid, 'tblname': tblname, }
         self.gui_queue.put(packet)
 
 #=============================================================================
 # StoreToH5 Handler
+
 
 class StoreToH5(DataHandler):
     default_autotbl = None
@@ -107,7 +101,7 @@ class StoreToH5(DataHandler):
         *destination* may be either a file name or an existing AutoTable object
         """
         self.destination = destination
-        
+
         if comm.rank == 0:
             if isinstance(destination, AutoTable):
                 self.autotbl = destination
@@ -119,30 +113,31 @@ class StoreToH5(DataHandler):
                 else:
                     self.autotbl = StoreToH5.default_autotbl
             else:
-                raise TypeError("Expects an AutoTable instance or a string as argument")
+                raise TypeError(
+                    "Expects an AutoTable instance or a string as argument")
 
             if StoreToH5.default_autotbl is None:
                 StoreToH5.default_autotbl = self.autotbl
+
     def __repr__(self):
-        return "StoreToH5 into file %s" % self.destination   
-     
+        return "StoreToH5 into file %s" % self.destination
+
     def append(self, tblname, value):
         self.autotbl.append(tblname, value)
-    
+
     def append_all(self, valdict):
         self.autotbl.append_all(valdict)
 
     def close(self):
         #if comm.rank != 0:
-            #return
+        #return
         self.autotbl.close()
-
 
 #=============================================================================
 # StoreToTxt Handler
 
-class StoreToTxt(DataHandler):
 
+class StoreToTxt(DataHandler):
     def __init__(self, destination=None):
         """ 
         Store data to the specified .txt destination.
@@ -156,23 +151,24 @@ class StoreToTxt(DataHandler):
                 if not isfile('terminal.txt'):
                     self.txt_file = open('terminal.txt', 'w')
                 else:
-                    raise ValueError("Please enter a file name that does not already exist.")
+                    raise ValueError(
+                        "Please enter a file name that does not already exist.")
 
     def append(self, tblname, value):
         self.txt_file.write("%s = %s\n" % (tblname, value))
-    
+
     def append_all(self, valdict):
         for entry in valdict.keys():
             self.txt_file.write("%s = %s\n" % (entry, valdict[entry]))
 
     def close(self):
         #if comm.rank != 0:
-            #return
+        #return
         self.txt_file.close()
-
 
 #=============================================================================
 # TextPrinter Handler
+
 
 class TextPrinter(DataHandler):
     def __init__(self):
@@ -182,21 +178,21 @@ class TextPrinter(DataHandler):
         pprint("  %8s = %s " % (tblname, value))
 
     def append_all(self, valdict):
-        for (name,val) in valdict.items():
+        for (name, val) in valdict.items():
             pprint("  %8s = %s \n" % (name, val), end="")
-
 
 #=============================================================================
 # DataLog
 
+
 class DataLog:
     def __init__(self, comm=MPI.COMM_WORLD):
         self.comm = comm
-        self.gui_queue = None        # Used to communicate with GUI process
-        self.gui_proc = None         # GUI process handle
+        self.gui_queue = None  # Used to communicate with GUI process
+        self.gui_proc = None  # GUI process handle
         self.next_vizid = 0
-        self.policy = []             # Ordered list of (tbname, handler)-tuples
-        self._lookup_cache = {}      # Cache for tblname -> hanlders lookups
+        self.policy = []  # Ordered list of (tbname, handler)-tuples
+        self._lookup_cache = {}  # Cache for tblname -> hanlders lookups
 
     def _lookup(self, tblname):
         """ Return a list of handlers to be used for tblname """
@@ -205,7 +201,7 @@ class DataLog:
 
         handlers = []
         for (a_tblname, a_handler) in self.policy:
-            if a_tblname == tblname or a_tblname == "*": # XXX wildcard matching XXX
+            if a_tblname == tblname or a_tblname == "*":  # XXX wildcard matching XXX
                 handlers.append(a_handler)
         self._lookup_cache[tblname] = handlers
         return handlers
@@ -218,10 +214,11 @@ class DataLog:
         if completed == None:
             print "[%s] %s" % (strftime("%H:%M:%S"), message)
         else:
-            totlen = 65-len(message)
-            barlen = int(totlen*completed)
-            spacelen = totlen-barlen
-            print "[%s] %s [%s%s]" % (strftime("%H:%M:%S"), message, "*"*barlen, "-"*spacelen)
+            totlen = 65 - len(message)
+            barlen = int(totlen * completed)
+            spacelen = totlen - barlen
+            print "[%s] %s [%s%s]" % (strftime("%H:%M:%S"), message, "*" *
+                                      barlen, "-" * spacelen)
 
     def append(self, tblname, value):
         """ Append the given value and call all the configured DataHandlers."""
@@ -245,20 +242,19 @@ class DataLog:
         for tblname, val in valdict.items():
             hl = self._lookup(tblname)
             all_handlers = all_handlers.union(hl)
-            
-        # Call all handlers but create a personalized version 
-        # of valdict with oble the values this particular handler
-        # is interested in
+
+            # Call all handlers but create a personalized version 
+            # of valdict with oble the values this particular handler
+            # is interested in
         for handler in all_handlers:
             argdict = {}
             for tblname, val in valdict.items():
                 hl = self._lookup(tblname)
-                
+
                 if handler in hl:
                     argdict[tblname] = val
 
             handler.append_all(argdict)
-            
 
     def ignored(self, tblname):
         """
@@ -284,13 +280,14 @@ class DataLog:
         """ Set the specifies handler for all data stored under the name *tblname* """
         if self.comm.rank != 0:
             return
-        
+
         if not issubclass(handler_class, DataHandler):
             raise TypeError("handler_class must be a subclass of DataHandler ")
 
         # If it's a GUI handler, instantiate a proxy and send 'create' command to GUI
-        if issubclass(handler_class, GUIDataHandler) and self.gui_proc is not None:
-            vizid = self.next_vizid     # Get an unique identifier
+        if issubclass(handler_class,
+                      GUIDataHandler) and self.gui_proc is not None:
+            vizid = self.next_vizid  # Get an unique identifier
             self.next_vizid = self.next_vizid + 1
 
             packet = {
@@ -301,28 +298,29 @@ class DataLog:
                 'handler_kargs': kargs
             }
             self.gui_queue.put(packet)
-            
+
             self.set_handler(tblname, GUIProxyHandler, self.gui_queue, vizid)  # set proxy handler
-            return 
+            return
 
         # if not, instantiate it now
-        handler = handler_class(*args, **kargs)             # instantiate handler 
+        handler = handler_class(*args, **kargs)  # instantiate handler
         handler.register(tblname)
 
         if isinstance(tblname, str):
-            self.policy.append( (tblname, handler) )    # append to policy
+            self.policy.append((tblname, handler))  # append to policy
         elif hasattr(tblname, '__iter__'):
             for t in tblname:
-                self.policy.append( (t, handler) )      # append to policy
+                self.policy.append((t, handler))  # append to policy
         else:
-            raise TypeError('Table-name must be a string (or a list of strings)')
+            raise TypeError(
+                'Table-name must be a string (or a list of strings)')
         return handler
 
     def remove_handler(self, handler):
         """ Remove specified handler so that data is no longer stored there. """
         if self.comm.rank != 0:
             return
-        
+
         if isinstance(handler, DataHandler):
             for a_tblname, a_handler in self.policy[:]:
                 if a_handler == handler:
@@ -331,10 +329,10 @@ class DataLog:
             self._lookup_cache = {}
         else:
             raise ValueError("Please provide valid DataHandler object.")
-        
+
     def start_gui(self, gui_class):
         if self.comm.rank != 0:
-            return 
+            return
 
         if self.gui_proc is not None:
             raise RuntimeError("GUI already started")
@@ -343,8 +341,9 @@ class DataLog:
             gui = gui_class(gui_queue)
             gui.run()
 
-        self.gui_queue = Queue(2)    # Used to communicate with GUI process
-        self.gui_proc = Process(target=gui_startup, args=(gui_class, self.gui_queue))
+        self.gui_queue = Queue(2)  # Used to communicate with GUI process
+        self.gui_proc = Process(target=gui_startup,
+                                args=(gui_class, self.gui_queue))
         self.gui_proc.start()
 
     def close(self, quit_gui=False):
@@ -354,17 +353,13 @@ class DataLog:
 
         #for (tblname, handler) in self.policy:
         #    handler.close()
-        
+
         if self.gui_proc is not None:
-            if quit_gui :
-                packet = {
-                    'cmd': 'quit',
-                    'vizid': 0
-                }
+            if quit_gui:
+                packet = {'cmd': 'quit', 'vizid': 0}
                 print "Sending quit!"
                 self.gui_queue.put(packet)
             self.gui_proc.join()
-            
 
 #=============================================================================
 # Create global default data logger
