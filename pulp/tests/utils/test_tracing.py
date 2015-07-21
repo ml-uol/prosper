@@ -13,6 +13,7 @@ import pulp.utils.tracing as tracing
 #=============================================================================
 # traceing tests
 
+
 class TestTracing(unittest.TestCase):
     def setUp(self):
         self.dirname = tempfile.mkdtemp()
@@ -28,6 +29,7 @@ class TestTracing(unittest.TestCase):
 
     def test_traced_wrapper(self):
         """Test that docs and name of traced functions are mantained."""
+
         @tracing.traced
         def funny_name(x, y, z):
             """Funny doc."""
@@ -35,4 +37,3 @@ class TestTracing(unittest.TestCase):
 
         self.assertEqual(funny_name.__doc__, """Funny doc.""")
         self.assertEqual(funny_name.__name__, 'funny_name')
-        
