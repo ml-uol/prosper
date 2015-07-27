@@ -1,13 +1,11 @@
 #
 #  Lincense: Academic Free License (AFL) v3.0
 #
-
 """
     Provide simple bar-pattern generator.
 """
 
 from __future__ import division
-
 
 __author__ = "Joerg Bornschein <bornschein@fias.uni-frankfurt.de>"
 
@@ -41,7 +39,7 @@ def generate(num, size, p_bar):
     noise of  #math`\sigma=5` variance.
     """
 
-    bars = np.zeros( (num, size, size) )
+    bars = np.zeros((num, size, size))
 
     for n in xrange(num):
         for i in range(size):
@@ -54,14 +52,14 @@ def generate(num, size, p_bar):
 
     return bars
 
+
 #For unit-test purposes
 def W_gen(H, bar_val):
     """Returns (*H*, (H//2)**2) array with bars inside of activity *bar_val*"""
-    D2 = H//2
-    D = D2**2
-    W_gt = np.zeros( (H, D2, D2) )
+    D2 = H // 2
+    D = D2 ** 2
+    W_gt = np.zeros((H, D2, D2))
     for i in xrange(D2):
-        W_gt[   i, i, :] = bar_val
-        W_gt[D2+i, :, i] = bar_val
-    return W_gt.reshape( (H, D) )
-    
+        W_gt[i, i, :] = bar_val
+        W_gt[D2 + i, :, i] = bar_val
+    return W_gt.reshape((H, D))

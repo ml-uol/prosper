@@ -2,7 +2,6 @@
 #  Author:   Jorg Bornschein <bornschein@fias.uni-frankfurt.de)
 #  Lincense: Academic Free License (AFL) v3.0
 #
-
 """
 
 Record tracepoint for runtime profiling/tracing.
@@ -71,12 +70,14 @@ def traced(func):
     """
     begin_str = func.func_name + ':begin'
     end_str = func.func_name + ':end'
+
     @wraps(func)
     def wrapped(*args, **kwargs):
         tracepoint(begin_str)
         res = func(*args, **kwargs)
         tracepoint(end_str)
         return res
+
     return wrapped
 
 
@@ -99,7 +100,9 @@ def set_tracefile(fname="trace-%04d.txt", comm=MPI.COMM_WORLD):
     trace_file.write("# Hostname: %s\n" % os.uname()[1])
     trace_file.write("# MPI size: %d rank: %d\n" % (comm.size, comm.rank))
 
-    comm.Barrier(); start_time = MPI.Wtime()
+    comm.Barrier()
+    start_time = MPI.Wtime()
+
 
 def close(archive=True, comm=MPI.COMM_WORLD):
     """ Closes the tracefiles and archives all tracefiles
@@ -128,16 +131,15 @@ def close(archive=True, comm=MPI.COMM_WORLD):
             archive_cmd.append(trace_tailname % rank)
         #print"Running ", archive_cmd
         subprocess.call(archive_cmd, stderr=subprocess.STDOUT)
-        
+
         # Delete tracefiles
         rm_cmd = ["rm"]
         for rank in xrange(comm.size):
             rm_cmd.append(trace_fname % rank)
         #print"Running ", rm_cmd
         subprocess.call(rm_cmd, stderr=subprocess.STDOUT)
-    
+
     # Cleanup global variables
     trace_fname = None
     trace_file = None
     start_time = None
-

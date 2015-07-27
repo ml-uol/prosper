@@ -2,7 +2,6 @@
 #  Author:   Jorg Bornschein <bornschein@fias.uni-frankfurt.de)
 #  Lincense: Academic Free License (AFL) v3.0
 #
-
 """
     The pulp.utils packages provides various utility functions and classes.
 """
@@ -13,6 +12,7 @@ import sys
 import os
 
 from mpi4py import MPI
+
 
 def create_output_path(basename=None):
     """ Creates the output directory making sure you don't overwrite a folder. 
@@ -29,20 +29,20 @@ def create_output_path(basename=None):
     """
     comm = MPI.COMM_WORLD
 
-    if comm.rank == 0:                     # MPI Rank 0 does all the work
+    if comm.rank == 0:  # MPI Rank 0 does all the work
         if basename is None:
             basename = sys.argv[0]
 
         # Determine suffix
         if 'PBS_JOBID' in os.environ:
-            job_no = os.environ['PBS_JOBID'].split('.')[0]   # Job Number
-            suffix = "d"+job_no
+            job_no = os.environ['PBS_JOBID'].split('.')[0]  # Job Number
+            suffix = "d" + job_no
         elif 'SLURM_JOBID' in os.environ:
-            job_no = os.environ['SLURM_JOBID'] 
-            suffix = "d"+job_no
+            job_no = os.environ['SLURM_JOBID']
+            suffix = "d" + job_no
         else:
             suffix = tm.strftime("%Y-%m-%d+%H:%M")
-            
+
         suffix_counter = 0
         dirname = "output/%s.%s" % (basename, suffix)
         while True:
@@ -52,11 +52,11 @@ def create_output_path(basename=None):
                 if e.errno != errno.EEXIST:
                     raise e
                 suffix_counter += 1
-                dirname = "output/%s.%s+%d" % (basename, suffix, suffix_counter)
+                dirname = "output/%s.%s+%d" % (basename, suffix,
+                                               suffix_counter)
             else:
                 break
     else:
         dirname = None
-        
-    return comm.bcast(dirname)+"/"
 
+    return comm.bcast(dirname) + "/"

@@ -1,7 +1,6 @@
 #
 #  Lincense: Academic Free License (AFL) v3.0
 #
-
 """
 The autotable module provides a simple interface to store data from simulation
 runs into efficient HDF5 files onto the filesystem.
@@ -32,8 +31,10 @@ numbers in each row.
 import numpy as np
 import tables
 
+
 class AutoTable:
     """Store data into HDF5 files"""
+
     def __init__(self, fname=None, compression_level=1):
         """ Create a new autotable object which will write data into a file called fname.
 
@@ -98,10 +99,10 @@ class AutoTable:
         >>> tbl.append("T", temp)
         >>> tbl.append("image", np.zeros((256,256)) )
         """
-        if type(value)==np.ma.core.MaskedArray:
+        if type(value) == np.ma.core.MaskedArray:
             value = value.data
 
-        if type(value)==str:
+        if type(value) == str:
             self._appendstr(name, value)
             return
 
@@ -109,21 +110,23 @@ class AutoTable:
             value = np.asarray(value)
 
         if not isinstance(value, np.ndarray):
-            raise TypeError("Don't know how to handle values of type '%s'", type(value))
+            raise TypeError("Don't know how to handle values of type '%s'",
+                            type(value))
 
         # Check if we need to create a new table
         if not self.tables.has_key(name):
             self._create_table(name, value)
 
-        value = value.reshape( (1,)+value.shape )
+        value = value.reshape((1, ) + value.shape)
         try:
             self.tables[name].append(value)
         except ValueError:
-            raise TypeError('Wrong datatype "%s" for "%s" field' % (value.dtype, name))
+            raise TypeError('Wrong datatype "%s" for "%s" field' %
+                            (value.dtype, name))
 
         self.tables[name].flush()
 
-    def assign(self,  name,  value):
+    def assign(self, name, value):
         """ Assigns the dataset *values* into a table called *name*.
 
         If the specified table exist beforehand, the old data will be overwritten.
@@ -139,33 +142,32 @@ class AutoTable:
         >>> tbl.assign("T", temp)
         >>> tbl.assign("image", np.zeros((256,256)) )
         """
-        if type(value)==str:
+        if type(value) == str:
             self._appendstr(name, value)
             return
 
         if np.isscalar(value):
             value = np.asarray(value)
-            value = value.reshape((1, )+value.shape)
-
+            value = value.reshape((1, ) + value.shape)
 
         if not isinstance(value, np.ndarray):
-            raise TypeError("Don't know how to handle values of type '%s'", type(value))
+            raise TypeError("Don't know how to handle values of type '%s'",
+                            type(value))
 
         if not self.tables.has_key(name):
             pass
         else:
             if self.warnings:
-                print "Warning! The previous data with key %s is being overwritten" %name
+                print "Warning! The previous data with key %s is being overwritten" % name
             self._delete_table(name)
 
         try:
             for ii in range(value.shape[0]):
-                self.append(name,  value[ii])
+                self.append(name, value[ii])
         except ValueError:
-            raise TypeError('Wrong datatype for "%s" field'%name)
+            raise TypeError('Wrong datatype for "%s" field' % name)
 
         self.tables[name].flush()
-
 
     def append_all(self, valdict):
         """Append all the key-value pairs to the table.
@@ -197,7 +199,7 @@ class AutoTable:
         >>> tbl.append("T", temp)
         >>> tbl.append("image", np.zeros((256,256)) )
         """
-        if type(value)==list and type(value[0])==str:
+        if type(value) == list and type(value[0]) == str:
             self._appendstrList(name, value)
             return
 
@@ -205,21 +207,22 @@ class AutoTable:
             value = np.asarray(value)
 
         if not isinstance(value, np.ndarray):
-            raise TypeError("Don't know how to handle values of type '%s'", type(value))
+            raise TypeError("Don't know how to handle values of type '%s'",
+                            type(value))
 
         # Check if we need to create a new table
         if not self.tables.has_key(name):
             self._create_table_list(name, value)
 
-        value = value.reshape(value.shape )
+        value = value.reshape(value.shape)
         try:
             self.tables[name].append(value)
         except ValueError:
-            raise TypeError('Wrong datatype for "%s" field'%name)
+            raise TypeError('Wrong datatype for "%s" field' % name)
 
         self.tables[name].flush()
 
-    def  _delete_table(self,  name):
+    def _delete_table(self, name):
         """
         Delete a node from the h5-table together with all dictionary entries
         that has been created with the node.
@@ -247,23 +250,31 @@ class AutoTable:
         }
 
         try:
-            if type(example)==np.ndarray:
+            if type(example) == np.ndarray:
                 h5type = type_map[example.dtype]
-            elif type(example)==str:
+            elif type(example) == str:
                 h5type = tables.VLStringAtom()
         except KeyError:
-            raise TypeError("Could not create table %s because of unknown dtype '%s'" % (name, example.dtype) )#+ ", of name: " % example.shape)
+            raise TypeError(
+                "Could not create table %s because of unknown dtype '%s'" %
+                (name, example.dtype))  #+ ", of name: " % example.shape)
 
-        if type(example)==np.ndarray:
-            h5dim = (0,) + example.shape
+        if type(example) == np.ndarray:
+            h5dim = (0, ) + example.shape
 
             h5 = self.h5
-            filters = tables.Filters(complevel=self.compression_level, complib='zlib', shuffle=True)
-            self.tables[name] = h5.createEArray( h5.root, name, h5type, h5dim, filters=filters )
-        elif type(example)==str:
+            filters = tables.Filters(complevel=self.compression_level,
+                                     complib='zlib',
+                                     shuffle=True)
+            self.tables[name] = h5.createEArray(h5.root, name, h5type, h5dim,
+                                                filters=filters)
+        elif type(example) == str:
             h5 = self.h5
-            filters = tables.Filters(complevel=self.compression_level, complib='zlib', shuffle=True)
-            self.tables[name] = h5.createVLArray( h5.root, name, h5type, filters=filters )
+            filters = tables.Filters(complevel=self.compression_level,
+                                     complib='zlib',
+                                     shuffle=True)
+            self.tables[name] = h5.createVLArray(h5.root, name, h5type,
+                                                 filters=filters)
         self.types[name] = type(example)
 
     def _create_table_list(self, name, example):
@@ -273,36 +284,43 @@ class AutoTable:
         The modified version for creating table with appendList
         """
         type_map = {
-            np.dtype(np.float64) : tables.Float64Atom(),
-            np.dtype(np.float32) : tables.Float32Atom(),
-            np.dtype(np.int)     : tables.Int64Atom(),
-            np.dtype(np.int8)    : tables.Int8Atom(),
-            np.dtype(np.uint8)   : tables.UInt8Atom(),
-            np.dtype(np.int16)   : tables.Int16Atom(),
-            np.dtype(np.uint16)  : tables.UInt16Atom(),
-            np.dtype(np.int32)   : tables.Int32Atom(),
-            np.dtype(np.uint32)  : tables.UInt32Atom(),
-            np.dtype(np.bool)    : tables.BoolAtom(),
+            np.dtype(np.float64): tables.Float64Atom(),
+            np.dtype(np.float32): tables.Float32Atom(),
+            np.dtype(np.int): tables.Int64Atom(),
+            np.dtype(np.int8): tables.Int8Atom(),
+            np.dtype(np.uint8): tables.UInt8Atom(),
+            np.dtype(np.int16): tables.Int16Atom(),
+            np.dtype(np.uint16): tables.UInt16Atom(),
+            np.dtype(np.int32): tables.Int32Atom(),
+            np.dtype(np.uint32): tables.UInt32Atom(),
+            np.dtype(np.bool): tables.BoolAtom(),
         }
 
         try:
-            if type(example)==np.ndarray:
+            if type(example) == np.ndarray:
                 h5type = type_map[example.dtype]
-            elif type(example)==list and type(example[0])==str:
+            elif type(example) == list and type(example[0]) == str:
                 h5type = tables.VLStringAtom()
         except KeyError:
-            raise TypeError("Don't know how to handle dtype '%s'" % example.dtype)
+            raise TypeError("Don't know how to handle dtype '%s'" %
+                            example.dtype)
 
-        if type(example)==np.ndarray:
-            h5dim = (0,)+example.shape[1:]
+        if type(example) == np.ndarray:
+            h5dim = (0, ) + example.shape[1:]
 
             h5 = self.h5
-            filters = tables.Filters(complevel=self.compression_level, complib='zlib', shuffle=True)
-            self.tables[name] = h5.createEArray( h5.root, name, h5type, h5dim, filters=filters )
-        elif type(example)==list and type(example[0])==str:
+            filters = tables.Filters(complevel=self.compression_level,
+                                     complib='zlib',
+                                     shuffle=True)
+            self.tables[name] = h5.createEArray(h5.root, name, h5type, h5dim,
+                                                filters=filters)
+        elif type(example) == list and type(example[0]) == str:
             h5 = self.h5
-            filters = tables.Filters(complevel=self.compression_level, complib='zlib', shuffle=True)
-            self.tables[name] = h5.createVLArray( h5.root, name, h5type, filters=filters )
+            filters = tables.Filters(complevel=self.compression_level,
+                                     complib='zlib',
+                                     shuffle=True)
+            self.tables[name] = h5.createVLArray(h5.root, name, h5type,
+                                                 filters=filters)
         self.types[name] = type(example)
 
     def _guess_fname(self):
@@ -314,7 +332,7 @@ class AutoTable:
         import os.path as path
 
         base, _ = path.splitext(sys.argv[0])
-        return base+".h5"
+        return base + ".h5"
 
     def _appendstr(self, name, value):
         """
@@ -327,7 +345,9 @@ class AutoTable:
         try:
             self.tables[name].append(value)
         except ValueError:
-            raise TypeError("Could not create table %s because of unknown dtype '%s'" % (name, example.dtype)  )  
+            raise TypeError(
+                "Could not create table %s because of unknown dtype '%s'" %
+                (name, example.dtype))
             #raise TypeError('Wrong datatype for "%s" field'%name)
 
         self.tables[name].flush()
@@ -341,8 +361,8 @@ class AutoTable:
             self._create_table_list(name, value)
 
         try:
-            map(self.tables[name].append,value)
+            map(self.tables[name].append, value)
         except ValueError:
-            raise TypeError('Wrong datatype for "%s" field'%name)
+            raise TypeError('Wrong datatype for "%s" field' % name)
 
         self.tables[name].flush()

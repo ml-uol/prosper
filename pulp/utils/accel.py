@@ -1,7 +1,6 @@
 #
 #  Lincense: Academic Free License (AFL) v3.0
 #
-
 """
 
 Try to import accelerated versions of various NumPy operations..
@@ -22,12 +21,11 @@ log = np.log
 log2 = np.log2
 log10 = np.log10
 
-
 #=============================================================================
 # Try to import AMD Core Math Library
 try:
     import pyacml
-    
+
     backend = "pyacml"
 
     sin = pyacml.sin
@@ -38,6 +36,3 @@ try:
     log10 = pyacml.log10
 except ImportError as e:
     pass
-
-
-
