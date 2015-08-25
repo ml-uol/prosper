@@ -2,19 +2,13 @@
 #  Lincense: Academic Free License (AFL) v3.0
 #
 
-"""
-
-"""
-
 from __future__ import division
-try:
-    from abc import ABCMeta, abstractmethod
-except ImportError, e:
-    from pulp.utils.py25_compatibility import _py25_ABCMeta as ABCMeta
-    from pulp.utils.py25_compatibility import _py25_abstractmethod as abstractmethod
+
+from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import time
+
 from pulp.utils.datalog import dlog
 
 class Annealing():
