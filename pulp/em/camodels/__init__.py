@@ -234,7 +234,7 @@ class CAModel(Model):
 
         if 'candidates' not in my_data:
             my_data = self.select_Hprimes(model_params, my_data)
-            my_cand = my_data['candidates']
+        my_cand = my_data['candidates']
 
 
         my_suff_stat = self.E_step(anneal, model_params, my_data)
