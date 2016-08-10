@@ -247,26 +247,8 @@ class DataLog:
         if not issubclass(handler_class, DataHandler):
             raise TypeError("handler_class must be a subclass of DataHandler ")
 
-        # If it's a GUI handler, instantiate a proxy and send 'create' command to GUI
-        if issubclass(handler_class,
-                      GUIDataHandler) and self.gui_proc is not None:
-            vizid = self.next_vizid  # Get an unique identifier
-            self.next_vizid = self.next_vizid + 1
-
-            packet = {
-                'cmd': 'create',
-                'vizid': vizid,
-                'handler_class': handler_class,
-                'handler_args': args,
-                'handler_kargs': kargs
-            }
-            self.gui_queue.put(packet)
-
-            self.set_handler(tblname, GUIProxyHandler, self.gui_queue, vizid)  # set proxy handler
-            return
-
-        # if not, instantiate it now
-        handler = handler_class(*args, **kargs)  # instantiate handler
+        # instantiate data handler
+        handler = handler_class(*args, **kargs)
         handler.register(tblname)
 
         if isinstance(tblname, str):
