@@ -106,7 +106,7 @@ class Ternary_ET(CAModel):
             Wbar =np.dot(SM,W)
             log_prod_joint = pre1 * (((Wbar-y)**2).sum(axis=1))
             F[n] = log_prod_joint
-            corr = (pre_F[n,:]+F[n,:]).max()
+            # corr = (pre_F[n,:]+F[n,:]).max()
             F__=pre_F[n]+F[n]
             tmp=np.argsort(F__)[-self.Hprime:]
             tmp2=np.nonzero(SM[tmp])[1]
@@ -114,44 +114,16 @@ class Ternary_ET(CAModel):
         data['candidates']=candidates
         return data
         
-    #@tracing.traced
-    #def select_Hprimes(self, model_params, data):
-        #"""
-        #Return a new data-dictionary which has been annotated with
-        #a data['candidates'] dataset. A set of self.Hprime candidates
-        #will be selected.
-        #"""
-        ##W  = model_params['W']
-        ##my_y = data['y']
-        ##my_N, D   = data['y'].shape
-        ##H, Hprime = self.H, self.Hprime
-        
-        ##candidates = np.zeros( (my_N, Hprime), dtype=np.int )
-        ##select = np.zeros( (my_N, H) )
-        
-        ##for n in xrange(my_N):
-            ##sim = np.inner(W,my_y[n])/ np.sqrt(np.diag(np.inner(W,W)))/ np.sqrt(np.inner(my_y[n],my_y[n]))
-            ##select[n] = sim
-            ##candidates[n] = np.argsort(sim)[-Hprime:]
-        ##data['candidates'] = candidates
-        ##dlog.append('select', select)
-        #pp("W.shape = "+np.str(model_params['W'].shape[0]) +" "+np.str(model_params['W'].shape[1])+" data['y'].shape = "+np.str(data['y'].shape[0])+" "+np.str(data['y'].shape[1]))
-	#pp("W.dtype %s y.type %s"% (model_params['W'].dtype,data['y'].dtype))
-        #data['candidates'] = linca_et_cython.select_Hprimes(self.H, self.Hprime, np.abs(model_params['W']),np.abs( data['y']), data['y'].shape[0])
-        #return data
-
     @tracing.traced
     def generate_data(self, model_params, my_N):
         D = self.D
         H = self.H
-        states=self.states
         pi = model_params['pi']
         W  = model_params['W'].T
         sigma = model_params['sigma']
         # Create output arrays, y is data, s is ground-truth
         y = np.zeros( (my_N, D) )
         s = np.zeros( (my_N, H), dtype=np.int8)
-        temp1=np.zeros( (len(states )),dtype=np.bool )
         for n in xrange(my_N):
                 p = np.random.random(H)        # create latent vector
                 for i in xrange(H):
@@ -185,9 +157,7 @@ class Ternary_ET(CAModel):
             anneal['N_cut_factor'] 0.: no truncation; 1. trunc. according to model
 
         """
-        comm    =   self.comm
         my_N, D =   my_data['y'].shape
-        H       =   self.H
         SM      =   self.state_matrix
         pp("E_step\n")
         l1,l2   =   SM.shape
@@ -261,12 +231,10 @@ class Ternary_ET(CAModel):
         """        
         comm      = self.comm
         H         = self.H
-        Hprime    = self.Hprime    
         gamma     = self.gamma
         W         = model_params['W'].T
         pi        = model_params['pi']
         sigma     = model_params['sigma']
-        states    = self.states
 
         # Read in data:
         my_y       = my_data['y'].copy()
