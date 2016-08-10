@@ -38,8 +38,6 @@ class MMCA_ET(CAModel):
         self.rho_ubound = 35          # for rho: never use a rho larger than this
         self.tol = 1e-4               # for W: ensure W[W<tol] = tol
 
-        self.rev_corr = False
-
         # Noise Policy
         tol = self.tol
         self.noise_policy = {
@@ -48,21 +46,14 @@ class MMCA_ET(CAModel):
             'sigma': (     tol,   +np.inf, False           )
         }
 
-        # XXX debugging XXX
-        #self.tbl = AutoTable("mmca-debug/mmca-debug-%04d.h5" % comm.rank)
-        #self.last_candidates = None
-
     @tracing.traced
     def check_params(self, model_params):
         """
         Sanity-check the given model parameters. Raises an exception if something 
         is severely wrong.
         """
-        # XXX
-        #model_params = CAModel.check_params(self, model_params)
-
         tol = self.tol
-        W = model_params['W']
+        W = model_params['W'].T
 
         # Ensure |W| >= tol
         W[np.logical_and(W >= 0., W < +tol)] = +tol
@@ -76,7 +67,7 @@ class MMCA_ET(CAModel):
             Generate data according to the MCA model while the latents are 
             given in my_hdata['s'].
         """
-        W     = model_params['W']
+        W     = model_params['W'].T
         pies  = model_params['pi']
         sigma = model_params['sigma']
         H, D  = W.shape
@@ -111,7 +102,7 @@ class MMCA_ET(CAModel):
         my_y      = data['y']
         my_N, _   = my_y.shape
         H, Hprime = self.H, self.Hprime
-        W         = model_params['W']
+        W         = model_params['W'].T
 
         #if self.last_candidates is not None:
         #    print "Reusing candidates"
@@ -157,7 +148,7 @@ class MMCA_ET(CAModel):
         state_abs = self.state_abs           # shape: (no_states,)
         no_states = len(state_abs)
 
-        W         = model_params['W']
+        W         = model_params['W'].T
         pies      = model_params['pi']
         sigma     = model_params['sigma']
 
@@ -228,7 +219,7 @@ class MMCA_ET(CAModel):
         comm      = self.comm
         H, Hprime = self.H, self.Hprime
         gamma     = self.gamma
-        W         = model_params['W']
+        W         = model_params['W'].T
         pies      = model_params['pi']
         sigma     = model_params['sigma']
 
@@ -301,13 +292,6 @@ class MMCA_ET(CAModel):
         my_Wq    = np.zeros_like(W)  # shape (H, D)
         my_pi    = 0.0               #
         my_sigma = 0.0               #
-
-        # Do reverse correlation if requested
-        if self.rev_corr:
-            my_y_rc   = my_data['y_rc']
-            D_rev_corr  = my_y_rc.shape[1]
-            my_rev_corr = np.zeros( (H,D_rev_corr) )
-            my_rev_corr_count = np.zeros(H)
 
         # Iterate over all datapoints
         tracing.tracepoint("M_step:iterating...")
@@ -382,19 +366,6 @@ class MMCA_ET(CAModel):
 
             my_ldenom_sum += accel.log(np.sum(accel.exp(logpj))) #For loglike computation
 
-            # Estimate reverse correlation
-            if self.rev_corr:
-                pys = pjb / denom
-                if np.isfinite(pys).all():
-                    my_rev_corr       += pys[1:H+1, None]*my_y_rc[n,None,:]
-                    my_rev_corr_count += pys[1:H+1]
-                    my_rev_corr[cand]       += np.sum(state_mtx[:,:,None]*pys[H+1:,None,None]*my_y_rc[n,None,:], axis=0)
-                    my_rev_corr_count[cand] += np.sum(state_mtx[:,:]*pys[H+1,None], axis=0)
-                else:
-                    print "Not all finite rev_corr %d" % n
- 
-
-
         # Calculate updated W
         if 'W' in self.to_learn:
             tracing.tracepoint("M_step:update W")
@@ -420,8 +391,9 @@ class MMCA_ET(CAModel):
             alpha = 2.5
             inertia = np.maximum(1. - accel.exp(-Wq / alpha), 0.2)
             W_new = inertia*W_new + (1-inertia)*W
+            W_new = W_new.T
         else:
-            W_new = W
+            W_new = W.T
 
         # Calculate updated pi
         if 'pi' in self.to_learn:
@@ -448,18 +420,8 @@ class MMCA_ET(CAModel):
         # For practical and et approx reasons we use: sum of restected respons=1
         loglike_et = (lAi * N_use) + ldenom_sum
 
-        if self.rev_corr:
-            rev_corr       = np.empty_like(my_rev_corr)
-            rev_corr_count = np.empty_like(my_rev_corr_count)
-            comm.Allreduce( [my_rev_corr,       MPI.DOUBLE], [rev_corr,       MPI.DOUBLE])
-            comm.Allreduce( [my_rev_corr_count, MPI.DOUBLE], [rev_corr_count, MPI.DOUBLE])
-            rev_corr /= (1e-16+rev_corr_count[:,None])
-        else:
-            rev_corr = np.zeros( (H, D) )
-
-
         # Restore np.seterr
         np.seterr(**old_seterr)
 
-        return { 'W': W_new, 'pi': pi_new, 'sigma': sigma_new , 'rev_corr': rev_corr, 'Q':loglike_et}
+        return { 'W': W_new, 'pi': pi_new, 'sigma': sigma_new , 'Q':loglike_et}
 
