@@ -2,6 +2,5 @@ numpy >= 1.5.0
 scipy >= 0.7.2 
 nose >= 1.2
 mock
-matplotlib
 mpi4py
 tables
