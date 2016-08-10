@@ -9,14 +9,12 @@ from scipy.misc import comb
 
 
 import pulp.utils.parallel as parallel
-from pulp.utils.parallel import pprint as pp
+# from pulp.utils.parallel import pprint as pp #use for debugging 
 import pulp.utils.tracing as tracing
 
 from pulp.utils.datalog import dlog
 from pulp.em.camodels import CAModel
 from pulp.em import Model
-#import linca_et_cython
-#reload(linca_et_cython)
 
 
 class Ternary_ET(CAModel):
@@ -81,7 +79,6 @@ class Ternary_ET(CAModel):
         pi        = model_params['pi']
         sigma     = model_params['sigma']
         states    = self.states
-        pp("W.shape = "+np.str(W.shape[0]) +" "+np.str(W.shape[1])+" data['y'].shape = "+np.str(my_N)+" "+np.str(D))
 
         # Precompute 
         pre1     = -1./2./sigma/sigma
@@ -144,7 +141,7 @@ class Ternary_ET(CAModel):
 
     #@tracing.traced
     def E_step(self, anneal, model_params, my_data):
-        """ LinCA E_step
+        """ TSC E_step
 
         my_data variables used:
 
@@ -159,7 +156,6 @@ class Ternary_ET(CAModel):
         """
         my_N, D =   my_data['y'].shape
         SM      =   self.state_matrix
-        pp("E_step\n")
         l1,l2   =   SM.shape
         W       =   model_params['W'].T
         pi      =   model_params['pi']
@@ -201,22 +197,18 @@ class Ternary_ET(CAModel):
             F[n,:] = log_prod_joint#+pil_bar
             hpvecs[n,:] = SM[np.argmax(log_prod_joint+pil_bar)]
         
-
-        pp("Iteration anneal: %d "%(anneal.cur_pos))
         dlog.append('HPvecs',hpvecs)
         if anneal['anneal_prior']:
             F += pre_F
             F *= beta
-            pp( "anneal prior with beta = %f" %(beta))
         else:
             F *=beta
             F += pre_F
-            pp( "not anneal prior with beta = %f" %(beta))
         return { 'logpj': F}#, 'denoms': denoms}
 
     #@tracing.traced
     def M_step(self, anneal, model_params, my_suff_stat, my_data):
-        """ LinCA M_step
+        """ TSC M_step
 
         my_data variables used:
             
@@ -263,7 +255,6 @@ class Ternary_ET(CAModel):
         #Truncate data
         if anneal['Ncut_factor'] > 0.0:
             #tracing.tracepoint("M_step:truncating")
-            pp("Ncut_factor %f"%(anneal['Ncut_factor']))
             N_use = int(N * (1 - (1 - A_pi_gamma) * anneal['Ncut_factor']))
             cut_denom = parallel.allsort(all_denoms)[-N_use]
             which   = np.array(all_denoms >= cut_denom)
@@ -373,12 +364,40 @@ class Ternary_ET(CAModel):
 
         return { 'W': W_new.transpose(), 'pi': pi_new, 'sigma': sigma_new, 'Q': 0.}
 
-    def calculate_respons(self, anneal, model_params, data):
-        data['candidates'].sort(axis=1) #(we do this to set the order back=outside)
-        F_JB = self.E_step(anneal, model_params, data)['logpj']
-        #Transform into responsabilities
+
+    @tracing.traced
+    def inference(self, anneal, model_params, my_data, no_maps=10):
+        W = model_params['W']
+        my_y = my_data['y']
+        H, D = W.shape
+        my_N, D = my_y.shape
+
+        # Prepare return structure
+        if no_maps==-1:
+            no_maps=self.state_matrix.shape[0]
+        res = {
+            's': np.zeros( (my_N, no_maps, H), dtype=np.int),
+            'p': np.zeros( (my_N, no_maps) )
+        }
+
+        if 'candidates' not in my_data:
+            my_data = self.select_Hprimes(model_params, my_data)
+        my_cand = my_data['candidates']
+
+
+        my_suff_stat = self.E_step(anneal, model_params, my_data)
+        my_logpj  = my_suff_stat['logpj']
+        my_corr   = my_logpj.max(axis=1)           # shape: (my_N,)
+        my_logpjc = my_logpj - my_corr[:, None]    # shape: (my_N, no_states)
+        my_pjc    = np.exp(my_logpjc)              # shape: (my_N, no_states)
+        my_denomc = my_pjc.sum(axis=1)             # shape: (my_N)
         
-        corr = np.max(F_JB, axis=1)       
-        exp_F_JB_corr = np.exp(F_JB - corr[:, None])
-        respons = exp_F_JB_corr/(np.sum(exp_F_JB_corr, axis=1).reshape(-1, 1))
-        return respons
+        idx = np.argsort(my_logpjc, axis=-1)[:, ::-1]
+        for n in xrange(my_N):                                   # XXX Vectorize XXX
+            for m in xrange(no_maps):
+                this_idx = idx[n,m]
+                res['p'][n,m] = my_pjc[n, this_idx] / my_denomc[n]
+                s_prime = self.state_matrix[this_idx]
+                res['s'][n,m,my_cand[n,:]] = s_prime
+
+        return res

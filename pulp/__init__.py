@@ -7,3 +7,4 @@ Top Level Package for Probabelistic Unsupervised Learning
 =========================================================
 
 """
+from .__version__ import __VERSION__

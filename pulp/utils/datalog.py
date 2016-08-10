@@ -49,43 +49,6 @@ class DataHandler(object):
     def close(self):
         pass
 
-#=============================================================================
-# GUIDataHandler (AbstractBaseClass)
-
-
-class GUIDataHandler(DataHandler):
-    __metaclass__ = ABCMeta
-
-
-class GUIProxyHandler(DataHandler):
-    def __init__(self, gui_queue, vizid):
-        self.gui_queue = gui_queue
-        self.vizid = vizid
-
-    def append(self, tblname, value):
-        packet = {
-            'cmd': 'append',
-            'vizid': self.vizid,
-            'tblname': tblname,
-            'value': value
-        }
-        self.gui_queue.put(packet)
-
-    def append_all(self, valdict):
-        packet = {
-            'cmd': 'append_all',
-            'vizid': self.vizid,
-            'valdict': valdict,
-        }
-        self.gui_queue.put(packet)
-
-    def close(self):
-        packet = {'cmd': 'close', 'vizid': self.vizid, }
-        self.gui_queue.put(packet)
-
-    def register(self, tblname):
-        packet = {'cmd': 'register', 'vizid': self.vizid, 'tblname': tblname, }
-        self.gui_queue.put(packet)
 
 #=============================================================================
 # StoreToH5 Handler
