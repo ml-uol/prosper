@@ -11,81 +11,63 @@ sys.path.insert(0, '../..')
 import numpy as np
 from mpi4py import MPI
 
-import tables
-
-# Import 
 from pulp.utils import create_output_path 
 from pulp.utils.parallel import pprint, stride_data
 
+from pulp.utils.barstest import generate_bars_dict
 from pulp.utils.datalog import dlog, StoreToH5, TextPrinter, StoreToTxt
-from pulp.visualize.gui import GUI, RFViewer, YTPlotter
 
 from pulp.em import EM
 from pulp.em.annealing import LinearAnnealing
 
 # Main
 if __name__ == "__main__":
+    import argparse
+
     comm = MPI.COMM_WORLD
 
-    pprint("="*40)
-    pprint(" Running %d parallel processes" % comm.size) 
-    pprint("="*40)
-    
-    # Parse command line arguments TODO: bit of error checking
-    if "param_file" not in globals():
-        param_fname = sys.argv[1]
-    else:
-        param_fname = param_file
-    if "output_path" not in globals():
-        output_path = sys.argv[2]
+    if len(sys.argv) != 2:
+        pprint("Usage: %s <parameter-file>" % sys.argv[0])
+        pprint()
+        exit(1)
+
+    param_fname = sys.argv[1]
 
     params = {}
     execfile(param_fname, params)
 
     # Extract some parameters
-    N = params['N']
-    D = params['D']
-    H = params['H']
+    N = params.get('N', 5000)            # no. of datapoint in the testset
+    size = params.get('size', 5)         # width / height of bars images
+    p_bar = params.get('p_bar', 1./size) # prob. for a bar to be active
+    D = params.get('D', size**2)         # observed dimensionality
+    H = params.get('H', 2*size)          # latent dimensionality
+    model = params['model']              # the actual generative model
 
-    D2 = H // 2
-    assert D2**2 == D
+    # Create output path
+    output_path = create_output_path()
 
-    # Load data 
-    data_fname = params.get('data_fname', output_path+"/data.h5")
-    with tables.openFile(data_fname, 'r') as data_h5:
-        N_file = data_h5.root.y.shape[0]
-        if N_file < N: 
-            dlog.progress("WARNING: N=%d chosen but only %d data points available. " % (N, N_file))
-            N = N_file
+    # Disgnostic output
+    pprint("="*40)
+    pprint(" Running bars experiment (%d parallel processes)" % comm.size) 
+    pprint("  size of training set:   %d" % N)
+    pprint("  size of bars images:    %d x %d" % (size, size))
+    pprint("  number of hiddens:      %d" % H)
+    pprint("  saving results to:      %s" % output_path)
+    pprint()
 
-        first_y, last_y = stride_data(N)
-        my_y = data_h5.root.y[first_y:last_y]
-    
-    my_data = {
-        'y': my_y
+    # Generate bars data
+    params_gt = {
+        'W'     :  10*generate_bars_dict(H),
+        'pi'    :  p_bar,
+        'sigma' :  1.0
     }
-
-    # Prepare model...
-    model = params['model']
-    #anneal = params['anneal']
+    my_data = model.generate_data(params_gt, N // comm.size)
 
     # Configure DataLogger
-    dlog.start_gui(GUI)
     print_list = ('T', 'Q', 'pi', 'sigma', 'N', 'MAE')
     dlog.set_handler(print_list, TextPrinter)
     dlog.set_handler(print_list, StoreToTxt, output_path +'/terminal.txt')
-    #dlog.set_handler('Q', YTPlotter)
-    dlog.set_handler('W', RFViewer, rf_shape=(D2, D2))
-    #dlog.set_handler(('W', 'pi', 'sigma', 'mu', 'y', 'MAE', 'N'), StoreToH5, output_path +'/result.h5')
-    if 'pi' in model.to_learn:
-        dlog.set_handler(['pi'], YTPlotter)
-    if 'pies' in model.to_learn:
-        dlog.set_handler(['pies'], YTPlotter)
-    if 'sigma' in model.to_learn:
-        dlog.set_handler(['sigma'], YTPlotter)
-    if 'mu' in model.to_learn:
-        dlog.set_handler(['mu'], YTPlotter)
-    #dlog.set_handler('y', RFViewer, rf_shape=(D2, D2))
 
     model_params = model.standard_init(my_data)
     
@@ -100,7 +82,6 @@ if __name__ == "__main__":
     em.data = my_data
     em.lparams = model_params
     em.run()
-
 
     dlog.close(True)
     pprint("Done")
