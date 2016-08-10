@@ -1,3 +1,6 @@
+
+from __future__ import division
+
 import sys
 sys.path.insert(0, '../..')
 
@@ -11,17 +14,17 @@ import pulp.utils.barstest as barstest
 class TestBarstest(unittest.TestCase):
     def setUp(self):
         self.H = 12
-        self.R = self.H / 2
+        self.R = self.H // 2
         self.D = self.R ** 2
 
     def test_generate(self):
-        W = barstest.generate_bars(self.H)
+        W = barstest.generate_bars_dict(self.H)
 
         self.assertTrue(((W == 0.) + (W == 1.)).all())
         self.assertEqual(W.shape, (self.D, self.H))
 
     def test_generate_negbars(self):
-        W = barstest.generate_bars(self.H, neg_bars=True)
+        W = barstest.generate_bars_dict(self.H, neg_bars=True)
 
         self.assertTrue(((W == -1.) + (W == 0.) + (W == 1.)).all())
         self.assertTrue((W == -1.).any())
@@ -31,7 +34,7 @@ class TestBarstest(unittest.TestCase):
         H = self.H
         D = self.D
 
-        Wgt = barstest.generate_bars(H)
+        Wgt = barstest.generate_bars_dict(H)
 
         # perform random permutation
         for r in xrange(10):
@@ -51,7 +54,7 @@ class TestBarstest(unittest.TestCase):
         H = self.H
         D = self.D
 
-        Wgt = barstest.generate_bars(H)
+        Wgt = barstest.generate_bars_dict(H)
 
         W = np.zeros((D, H + 2))
         W[:, :H] = Wgt[:, ::-1]
@@ -59,3 +62,12 @@ class TestBarstest(unittest.TestCase):
         perm = barstest.find_permutation(W, Wgt)
 
         self.assertTrue((W[:, perm] == Wgt).all())
+
+    def test_generate_bars_data(self):
+        num = 100
+        size = 5
+        p_bar = 1 / size
+
+        data = barstest.generate_bars_data(100, size, p_bar)
+
+        assert data.shape == (num, size*size)
