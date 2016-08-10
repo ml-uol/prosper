@@ -15,4 +15,4 @@ before_install:
 
 install: "pip install -r requirements.txt --use-mirrors"
 
-script: nosetests -v pulp
+script: nosetests -v --with-xunit --xunit-file=shippable/testresults/nosetests.xml
