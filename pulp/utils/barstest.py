@@ -5,8 +5,7 @@ import numpy as np
 #=============================================================================
 # Generate basis
 
-
-def generate_bars(H, neg_bars=False):
+def generate_bars_dict(H, neg_bars=False):
     """ Generate a ground-truth dictionary W suitable for a std. bars test
 
     Creates H bases vectors with horizontal and vertival bars on a R*R pixel grid,
@@ -32,9 +31,27 @@ def generate_bars(H, neg_bars=False):
         W_gt = sign[None, None, :] * W_gt
     return W_gt.reshape((D, H))
 
+def generate_bars_data(num, size, p_bar):
+    """ Generate a bars-test dataset.
+
+    Create a dataset consisting of *num* datapoints, each a size*size pixel grid.
+    The individual bars have a i.i.d. probability of being active of *p_bar*.
+    """
+    data = np.zeros((num, size, size))
+
+    for n in xrange(num):
+        for i in range(size):
+            # generate horizontal bar
+            if np.random.random() <= p_bar:
+                data[n, i, :] = 1.
+            # generate vertical bar
+            if np.random.random() <= p_bar:
+                data[n, :, i] = 1.
+
+    return data.reshape(num, size*size)
+
 #=============================================================================
 # Find permutations
-
 
 def find_permutation(W, Wgt):
     """ Check if *W* is a permutated version of *Wgt* and return the permutation.
@@ -90,7 +107,7 @@ def find_permutation2(W, Wgt):
     :type  Wgt: ndarray (D x H)
     :rtype: ndarray (dtype=int)
 
-    This implementation uses dynamic programming to  assignment algorithm with runtime > O(H H' D).
+    This implementation uses dynamic programming to assignment algorithm with runtime > O(H H' D).
     """
     D, H = W.shape
     Dgt, Hgt = Wgt.shape
