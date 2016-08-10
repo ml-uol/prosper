@@ -84,7 +84,6 @@ programs.
 References
 ==========
 
-
 [1] M. Henniges, G. Puertas, J. Bornschein, J. Eggert, and J. Lücke (2010).
 Binary Sparse Coding.
 Proc. LVA/ICA 2010, LNCS 6365, 450-457. 
