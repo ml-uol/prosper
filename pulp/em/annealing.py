@@ -12,7 +12,7 @@ import time
 from pulp.utils.datalog import dlog
 
 class Annealing():
-    """ Base class for implementations of annealing schemes
+    """ Base class for implementations of annealing schemes.
 
     Implementations deriving from this class control the cooling schedule 
     and provide some additional control functions used in the EM algorithm.

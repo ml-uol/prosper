@@ -171,7 +171,7 @@ class CAModel(Model):
         #dlog.append('Q', Q)
         #dlog.append('theo_Q', theo_Q)
 
-        # Log iboth model parameters and annealing parameters
+        # Log both model parameters and annealing parameters
         dlog.append_all(new_model_params)
         dlog.append_all(anneal.as_dict())
 
