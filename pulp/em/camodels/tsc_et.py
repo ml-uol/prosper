@@ -382,13 +382,3 @@ class Ternary_ET(CAModel):
         exp_F_JB_corr = np.exp(F_JB - corr[:, None])
         respons = exp_F_JB_corr/(np.sum(exp_F_JB_corr, axis=1).reshape(-1, 1))
         return respons
-
-    def free_energy(self, model_params, my_data):
-
-        return 0.0
-
-    def gain(self, old_parameters, new_parameters):
-
-        return 0.
-    
-
