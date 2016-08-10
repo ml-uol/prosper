@@ -178,11 +178,6 @@ class Ternary_ET(CAModel):
         F       =   np.empty( [my_N, l1] )
         pre_F   =   np.empty( [my_N, l1] )
         # Iterate over all datapoints
-        
-
-################ Identify Inference Latent vectors##############
-        hpvecs=np.empty((my_N,self.Hprime))
-###########################################################################
         for n in xrange(my_N):
             #tracing.tracepoint("E_step:iterating")
             y    = my_data['y'][n,:]
@@ -195,9 +190,7 @@ class Ternary_ET(CAModel):
             Wbar = np.dot(SM,W_)
             log_prod_joint = pre1 * (((Wbar-y)**2).sum(axis=1))
             F[n,:] = log_prod_joint#+pil_bar
-            hpvecs[n,:] = SM[np.argmax(log_prod_joint+pil_bar)]
         
-        dlog.append('HPvecs',hpvecs)
         if anneal['anneal_prior']:
             F += pre_F
             F *= beta
@@ -393,11 +386,39 @@ class Ternary_ET(CAModel):
         my_denomc = my_pjc.sum(axis=1)             # shape: (my_N)
         
         idx = np.argsort(my_logpjc, axis=-1)[:, ::-1]
+
         for n in xrange(my_N):                                   # XXX Vectorize XXX
             for m in xrange(no_maps):
                 this_idx = idx[n,m]
                 res['p'][n,m] = my_pjc[n, this_idx] / my_denomc[n]
                 s_prime = self.state_matrix[this_idx]
                 res['s'][n,m,my_cand[n,:]] = s_prime
+
+        which = ((res['s']!=0).sum(-1)==self.gamma).any(1)
+        my_small_data={}
+        my_small_data['y']=my_data['y'][which]
+        my_small_data['candidates']=my_data['candidates'][which]
+        while which.any():
+            self.gamma+=1
+            self.H+=1
+            my_suff_stat = self.E_step(anneal, model_params, my_small_data)
+            my_logpj  = my_suff_stat['logpj']
+            my_corr   = my_logpj.max(axis=1)           # shape: (my_N,)
+            my_logpjc = my_logpj - my_corr[:, None]    # shape: (my_N, no_states)
+            my_pjc    = np.exp(my_logpjc)              # shape: (my_N, no_states)
+            my_denomc = my_pjc.sum(axis=1)             # shape: (my_N)
+            
+            idx = np.argsort(my_logpjc, axis=-1)[:, ::-1]
+            my_N=np.sum(which)
+            for n in xrange(my_N):                                   # XXX Vectorize XXX
+                for m in xrange(no_maps):
+                    this_idx = idx[n,m]
+                    res['p'][which][n,m] = my_pjc[n, this_idx] / my_denomc[n]
+                    s_prime = self.state_matrix[this_idx]
+                    res['s'][which][n,m,my_cand[n,:]] = s_prime
+            which = ((res['s']!=0).sum(-1)==self.gamma).any(1)
+            my_small_data['y']=my_data['y'][which]
+            my_small_data['candidates']=my_data['candidates'][which]
+
 
         return res
