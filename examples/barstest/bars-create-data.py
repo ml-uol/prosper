@@ -42,7 +42,6 @@ data = model.generate_data(params_gt, N)
 # and save results
 out_fname = output_path+"/data.h5"
 with AutoTable(out_fname) as tbl:
-
     # Save ground-truth parameters
     for key in params_gt:
         tbl.append(key, params_gt[key])
@@ -50,5 +49,3 @@ with AutoTable(out_fname) as tbl:
     # Save generated data
     for key in data:
         tbl.appendList(key, data[key])
-
-
