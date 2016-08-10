@@ -47,7 +47,7 @@ class MCA_ET(CAModel):
         is severely wrong.
         """
         # XXX
-        #model_params = CAModel.check_params(self, model_params)
+        model_params = CAModel.check_params(self, model_params)
 
         # Obey W_tol
         model_params['W'] = np.maximum(model_params['W'], self.W_tol)  
@@ -63,7 +63,7 @@ class MCA_ET(CAModel):
         """
         H, D = self.H, self.D
 
-        W     = model_params['W']
+        W     = model_params['W'].T
         pies  = model_params['pi']
         sigma = model_params['sigma']
 
@@ -95,7 +95,7 @@ class MCA_ET(CAModel):
         my_y      = data['y']
         my_N, _   = my_y.shape
         H, Hprime = self.H, self.Hprime
-        W         = model_params['W']
+        W         = model_params['W'].T
 
         # Allocate return structure
         candidates = np.zeros( (my_N, Hprime), dtype=np.int )
@@ -135,7 +135,7 @@ class MCA_ET(CAModel):
         state_abs = self.state_abs           # shape: (no_states,)
         no_states = len(state_abs)
 
-        W         = model_params['W']
+        W         = model_params['W'].T
         pies      = model_params['pi']
         sigma     = model_params['sigma']
 
@@ -196,7 +196,7 @@ class MCA_ET(CAModel):
         comm      = self.comm
         H, Hprime = self.H, self.Hprime
         gamma     = self.gamma
-        W         = model_params['W']
+        W         = model_params['W'].T
         pies      = model_params['pi']
         sigma     = model_params['sigma']
 
@@ -345,9 +345,9 @@ class MCA_ET(CAModel):
             Wp[Wq < tiny] = 0.
             Wq[Wq < tiny] = tiny
 
-            W_new = Wp / Wq
+            W_new = (Wp / Wq).T
         else:
-            W_new = W
+            W_new = W.T
 
         # Calculate updated pi
         if 'pi' in self.to_learn:
