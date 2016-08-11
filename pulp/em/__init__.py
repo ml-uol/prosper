@@ -174,5 +174,5 @@ class EM():
             if anneal.accept:
                 model_params = new_model_params
 
-        self.lparams = model_params
+            self.lparams = model_params
 
