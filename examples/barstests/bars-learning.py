@@ -44,6 +44,9 @@ if __name__ == "__main__":
     H = params.get('H', 2*size)          # latent dimensionality
     model = params['model']              # the actual generative model
 
+    # Ground truth parameters -- only used for generation
+    params_gt = params.get('params_gt')  # Ground truth param 
+
     # Create output path
     output_path = create_output_path()
 
@@ -57,13 +60,6 @@ if __name__ == "__main__":
     pprint()
 
     # Generate bars data
-    params_gt = {
-        'W'     :  10*generate_bars_dict(H),
-        'pi'    :  p_bar,
-        'sigma' :  1.0
-    }
-
-    params_gt = params.get('params_gt', params_gt)   
     my_data = model.generate_data(params_gt, N // comm.size)
 
     # Configure DataLogger
