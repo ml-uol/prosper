@@ -71,11 +71,14 @@ if __name__ == "__main__":
 
     model_params = model.standard_init(my_data)
     
-    # Choose annealing schedule
-    anneal = LinearAnnealing(50)
-    anneal['T'] = [(0, 2.), (.7, 1.)]
-    anneal['Ncut_factor'] = [(0,0.),(2./3,1.)]
-    anneal['anneal_prior'] = False
+    if 'anneal' in params:
+        anneal = params.get('anneal')
+    else:
+        # Choose annealing schedule
+        anneal = LinearAnnealing(50)
+        anneal['T'] = [(0, 2.), (.7, 1.)]
+        anneal['Ncut_factor'] = [(0,0.),(2./3,1.)]
+        anneal['anneal_prior'] = False
     
     # Create and start EM annealing
     em = EM(model=model, anneal=anneal)

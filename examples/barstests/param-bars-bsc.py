@@ -23,7 +23,13 @@ model = BSC_ET(D, H, Hprime, gamma)
 # Ground truth parameters. Only used to generate training data.
 params_gt = {
     'W'     :  10*generate_bars_dict(H),
-    'pi'    :  2.0 / size
+    'pi'    :  2.0 / size,
     'sigma' :  2.0
 }
 
+# Choose annealing schedule
+from pulp.em.annealing import LinearAnnealing
+anneal = LinearAnnealing(150)
+anneal['T'] = [(0, 5.), (.8, 1.)]
+anneal['Ncut_factor'] = [(0,0.),(2./3,1.)]
+anneal['anneal_prior'] = False
