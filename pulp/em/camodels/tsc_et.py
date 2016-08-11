@@ -28,39 +28,40 @@ class Ternary_ET(CAModel):
         self.D = D
         self.H = H
         self.Hprime=Hprime
-        l=len(states)
-        icond=True
-        for i in xrange(0,l):
-            if (states[i]==0):
-                continue
-            if icond:
-                icond=False
-                ss=np.eye( self.H,dtype=np.int8)*states[i]
-                continue
-            temp=np.eye(self.H,dtype=np.int8)*states[i]
-            ss=np.concatenate((ss,temp))
+        self._update_state_matrix()
+        # l=len(states)
+        # icond=True
+        # for i in xrange(0,l):
+        #     if (states[i]==0):
+        #         continue
+        #     if icond:
+        #         icond=False
+        #         ss=np.eye( self.H,dtype=np.int8)*states[i]
+        #         continue
+        #     temp=np.eye(self.H,dtype=np.int8)*states[i]
+        #     ss=np.concatenate((ss,temp))
             
-        self.fullSM=ss[np.sum(np.abs(ss),1)==1]                                # For ternary 2*HxH
-        s=np.empty((l**Hprime,Hprime),dtype=np.int8)
-        c=0
-        ar=np.array(states)
-        for i in itls.product(ar,repeat=Hprime):
-            s[c]=i
-            c+=1
-        states_abs=np.empty((l,l**Hprime))
-        for i in range(l):
-            states_abs[i,:]=(s==states[i]).sum(axis=1)
-        # Noise Policy
-        tol = 1e-5
-        self.noise_policy = {
-            'W'    : (-np.inf, +np.inf, False ),
-            'pi'   : (    tol,  1.-tol, False ),
-            'sigma': (     0., +np.inf, False )
-        }
-        # Generate state-space list
-        self.state_matrix = s[np.sum(np.abs(s),axis=1)<=gamma]
-        self.no_states=s.shape[0]
-        self.state_abs=states_abs
+        # self.fullSM=ss[np.sum(np.abs(ss),1)==1]                                # For ternary 2*HxH
+        # s=np.empty((l**Hprime,Hprime),dtype=np.int8)
+        # c=0
+        # ar=np.array(states)
+        # for i in itls.product(ar,repeat=Hprime):
+        #     s[c]=i
+        #     c+=1
+        # states_abs=np.empty((l,l**Hprime))
+        # for i in range(l):
+        #     states_abs[i,:]=(s==states[i]).sum(axis=1)
+        # # Noise Policy
+        # tol = 1e-5
+        # self.noise_policy = {
+        #     'W'    : (-np.inf, +np.inf, False ),
+        #     'pi'   : (    tol,  1.-tol, False ),
+        #     'sigma': (     0., +np.inf, False )
+        # }
+        # # Generate state-space list
+        # self.state_matrix = s[np.sum(np.abs(s),axis=1)<=gamma]
+        # self.no_states=s.shape[0]
+        # self.state_abs=states_abs
 
     @tracing.traced
     def select_Hprimes(self, model_params, data,):
@@ -359,7 +360,7 @@ class Ternary_ET(CAModel):
 
 
     @tracing.traced
-    def inference(self, anneal, model_params, my_data, no_maps=10):
+    def inference(self, anneal, model_params, my_data, no_maps=10,abs_marginal=True):
         W = model_params['W']
         my_y = my_data['y']
         H, D = W.shape
@@ -370,6 +371,8 @@ class Ternary_ET(CAModel):
             no_maps=self.state_matrix.shape[0]
         res = {
             's': np.zeros( (my_N, no_maps, H), dtype=np.int),
+            'm': np.zeros( (my_N, H) ),
+            'am' : np.zeros( (my_N, H) ),
             'p': np.zeros( (my_N, no_maps) )
         }
 
@@ -393,14 +396,23 @@ class Ternary_ET(CAModel):
                 res['p'][n,m] = my_pjc[n, this_idx] / my_denomc[n]
                 s_prime = self.state_matrix[this_idx]
                 res['s'][n,m,my_cand[n,:]] = s_prime
+            res['m'][n,my_cand[n]] = (my_pjc[n][:,None]*self.state_matrix/my_denomc[n]).sum(0)
+            if abs_marginal:
+                res['am'][n,my_cand[n]] = (my_pjc[n][:,None]*np.abs(self.state_matrix)/my_denomc[n]).sum(0)
 
-        which = ((res['s']!=0).sum(-1)==self.gamma).any(1)
+
+        which = ((res['s'][:,0,:]!=0).sum(-1)==self.gamma)
         my_small_data={}
         my_small_data['y']=my_data['y'][which]
         my_small_data['candidates']=my_data['candidates'][which]
         while which.any():
+            print "Data with activity gamma: {}".format(which.sum())
             self.gamma+=1
-            self.H+=1
+            print "New gamma: {}".format(self.gamma)
+            if self.Hprime<self.gamma:
+                self.Hprime+=1
+                print "New Hprime: {}".format(self.Hprime)
+            self._update_state_matrix()
             my_suff_stat = self.E_step(anneal, model_params, my_small_data)
             my_logpj  = my_suff_stat['logpj']
             my_corr   = my_logpj.max(axis=1)           # shape: (my_N,)
@@ -416,9 +428,49 @@ class Ternary_ET(CAModel):
                     res['p'][which][n,m] = my_pjc[n, this_idx] / my_denomc[n]
                     s_prime = self.state_matrix[this_idx]
                     res['s'][which][n,m,my_cand[n,:]] = s_prime
-            which = ((res['s']!=0).sum(-1)==self.gamma).any(1)
+                res['m'][which][n,my_cand[n,:]] = (my_pjc[n][:,None]*self.state_matrix/my_denomc[n]).sum(0)
+                if abs_marginal:
+                    res['am'][which][n,my_cand[n,:]] = (my_pjc[n][:,None]*np.abs(self.state_matrix)/my_denomc[n]).sum(0)
+            which = ((res['s'][:,0,:]!=0).sum(-1)==self.gamma)
             my_small_data['y']=my_data['y'][which]
             my_small_data['candidates']=my_data['candidates'][which]
 
 
         return res
+
+    def _update_state_matrix(self):
+        l=len(self.states)
+        icond=True
+        Hprime = self.Hprime
+        for i in xrange(0,l):
+            if (self.states[i]==0):
+                continue
+            if icond:
+                icond=False
+                ss=np.eye( self.H,dtype=np.int8)*self.states[i]
+                continue
+            temp=np.eye(self.H,dtype=np.int8)*self.states[i]
+            ss=np.concatenate((ss,temp))
+            
+        self.fullSM=ss[np.sum(np.abs(ss),1)==1]                                # For ternary 2*HxH
+        s=np.empty((l**Hprime,Hprime),dtype=np.int8)
+        c=0
+        ar=np.array(self.states)
+        for i in itls.product(ar,repeat=Hprime):
+            s[c]=i
+            c+=1
+        states_abs=np.empty((l,l**Hprime))
+        for i in range(l):
+            states_abs[i,:]=(s==self.states[i]).sum(axis=1)
+        # Noise Policy
+        tol = 1e-5
+        self.noise_policy = {
+            'W'    : (-np.inf, +np.inf, False ),
+            'pi'   : (    tol,  1.-tol, False ),
+            'sigma': (     0., +np.inf, False )
+        }
+        # Generate state-space list
+        self.state_matrix = s[np.sum(np.abs(s),axis=1)<=self.gamma]
+        self.no_states=s.shape[0]
+        self.state_abs=states_abs
+        print "state matrix updated"
