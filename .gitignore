@@ -3,4 +3,4 @@ docs/_build
 examples/*.h5
 *output
 *.log
-
+.ipynb_checkpoints
