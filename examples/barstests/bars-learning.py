@@ -48,7 +48,7 @@ if __name__ == "__main__":
     params_gt = params.get('params_gt')  # Ground truth param 
 
     # Create output path
-    output_path = create_output_path()
+    output_path = create_output_path(param_fname)
 
     # Disgnostic output
     pprint("="*40)
@@ -64,8 +64,10 @@ if __name__ == "__main__":
 
     # Configure DataLogger
     print_list = ('T', 'Q', 'pi', 'sigma', 'N', 'MAE')
+    store_list = ('*')
     dlog.set_handler(print_list, TextPrinter)
     dlog.set_handler(print_list, StoreToTxt, output_path +'/terminal.txt')
+    dlog.set_handler(store_list, StoreToH5, output_path +'/result.h5')
 
     model_params = model.standard_init(my_data)
     
