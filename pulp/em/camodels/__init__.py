@@ -238,7 +238,7 @@ class CAModel(Model):
 
         W = model_params['W']
         my_y = test_data
-        H, D = W.shape
+        H = self.H
         my_N, D = my_y.shape
 
         # Prepare return structure
@@ -280,3 +280,58 @@ class CAModel(Model):
 
         return res
 
+    def inference_marginal(self, anneal, model_params, candidates, test_data, logprob=False):
+        """
+        Perform inference with the learned model on test data and return the top K configurations with their posterior probabilities. 
+        :param anneal: Annealing schedule, e.g., em.anneal 
+        :type  anneal: pulp.em.annealling.Annealing
+        :param model_params: Learned model parameters, e.g., em.lparams 
+        :type  model_params: dict
+        :param candidates: The list of candidate binary configurations, e.g., my_data['candidates'] 
+        :type  candidates: numpy.ndarray
+        :param test_data: The test data 
+        :type  test_data: numpy.ndarray
+        :param topK: The number of returned configurations 
+        :type  topK: int
+        :param logprob: Return probability or log probability
+        :type  logprob: boolean
+        """
+
+        W = model_params['W']
+        my_y = test_data
+        H = self.H
+        my_N, D = my_y.shape
+
+        # Prepare return structure
+        logp_m = np.zeros((my_N, H))
+
+        my_cand = candidates
+        my_data = {
+        'y': test_data,
+        'candidates':my_cand
+        }
+
+        my_suff_stat = self.E_step(anneal, model_params, my_data)
+        my_logpj  = my_suff_stat['logpj']
+        my_corr   = my_logpj.max(axis=1)           # shape: (my_N,)
+        my_logpjc = my_logpj - my_corr[:, None]    # shape: (my_N, no_states)
+        my_pjc    = np.exp(my_logpjc)              # shape: (my_N, no_states)
+        my_denomc = my_pjc.sum(axis=1)             # shape: (my_N)
+        my_pjc = my_pjc/my_denomc[:,None]
+        my_logpjc += -np.log(my_denomc)[:,None]
+
+        from scipy.misc import logsumexp
+        
+        for n in range(my_N):
+            for h in range(H):
+                if h in my_cand[n,:]:
+                    idx = np.where(my_cand[n]==h)[0][0]
+                    logp = np.hstack([my_logpjc[n,h+1],my_logpjc[n,H+1:][self.state_matrix[:,idx]==1]])
+                    logp_m[n,h] = logsumexp(logp)
+                else:
+                    logp_m[n,h] = my_logpjc[n,h+1]
+
+        if logprob:
+            return logp_m
+        else:
+            return np.exp(logp_m)
