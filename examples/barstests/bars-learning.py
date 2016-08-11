@@ -44,8 +44,11 @@ if __name__ == "__main__":
     H = params.get('H', 2*size)          # latent dimensionality
     model = params['model']              # the actual generative model
 
+    # Ground truth parameters -- only used for generation
+    params_gt = params.get('params_gt')  # Ground truth param 
+
     # Create output path
-    output_path = create_output_path()
+    output_path = create_output_path(param_fname)
 
     # Disgnostic output
     pprint("="*40)
@@ -57,25 +60,25 @@ if __name__ == "__main__":
     pprint()
 
     # Generate bars data
-    params_gt = {
-        'W'     :  10*generate_bars_dict(H),
-        'pi'    :  p_bar,
-        'sigma' :  1.0
-    }
     my_data = model.generate_data(params_gt, N // comm.size)
 
     # Configure DataLogger
     print_list = ('T', 'Q', 'pi', 'sigma', 'N', 'MAE')
+    store_list = ('*')
     dlog.set_handler(print_list, TextPrinter)
     dlog.set_handler(print_list, StoreToTxt, output_path +'/terminal.txt')
+    dlog.set_handler(store_list, StoreToH5, output_path +'/result.h5')
 
     model_params = model.standard_init(my_data)
     
-    # Choose annealing schedule
-    anneal = LinearAnnealing(50)
-    anneal['T'] = [(0, 2.), (.7, 1.)]
-    anneal['Ncut_factor'] = [(0,0.),(2./3,1.)]
-    anneal['anneal_prior'] = False
+    if 'anneal' in params:
+        anneal = params.get('anneal')
+    else:
+        # Choose annealing schedule
+        anneal = LinearAnnealing(50)
+        anneal['T'] = [(0, 2.), (.7, 1.)]
+        anneal['Ncut_factor'] = [(0,0.),(2./3,1.)]
+        anneal['anneal_prior'] = False
     
     # Create and start EM annealing
     em = EM(model=model, anneal=anneal)
