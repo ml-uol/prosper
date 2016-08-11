@@ -1,6 +1,8 @@
 import numpy as np
 from pulp.utils.barstest import generate_bars_dict
 
+np.random.seed(1)
+
 # Number of datapoints to generate
 N = 1000
 
@@ -27,3 +29,7 @@ params_gt = {
     'sigma' :  2.0
 }
 
+# Choose annealing schedule
+from pulp.em.annealing import LinearAnnealing
+anneal = LinearAnnealing(300)
+anneal['T'] = [(0, 4.), (.8, 1.)]

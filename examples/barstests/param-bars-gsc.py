@@ -1,6 +1,8 @@
 from pulp.utils.barstest import generate_bars_dict
 import numpy as np
 
+np.random.seed(1)
+
 # Number of datapoints to generate
 N = 10000
 
