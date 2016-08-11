@@ -219,23 +219,39 @@ class CAModel(Model):
 
         return model_params
 
-    @tracing.traced
-    def inference(self, anneal, model_params, my_data, no_maps=10):
+    def inference(self, anneal, model_params, candidates, test_data, topK=10, logprob=False):
+        """
+        Perform inference with the learned model on test data and return the top K configurations with their posterior probabilities. 
+        :param anneal: Annealing schedule, e.g., em.anneal 
+        :type  anneal: pulp.em.annealling.Annealing
+        :param model_params: Learned model parameters, e.g., em.lparams 
+        :type  model_params: dict
+        :param candidates: The list of candidate binary configurations, e.g., my_data['candidates'] 
+        :type  candidates: numpy.ndarray
+        :param test_data: The test data 
+        :type  test_data: numpy.ndarray
+        :param topK: The number of returned configurations 
+        :type  topK: int
+        :param logprob: Return probability or log probability
+        :type  logprob: boolean
+        """
+
         W = model_params['W']
-        my_y = my_data['y']
+        my_y = test_data
         H, D = W.shape
         my_N, D = my_y.shape
 
         # Prepare return structure
         res = {
-            's': np.zeros( (my_N, no_maps, H), dtype=np.int),
-            'p': np.zeros( (my_N, no_maps) )
+            's': np.zeros( (my_N, topK, H), dtype=np.int),
+            'p': np.zeros( (my_N, topK) )
         }
 
-        if 'candidates' not in my_data:
-            my_data = self.select_Hprimes(model_params, my_data)
-        my_cand = my_data['candidates']
-
+        my_cand = candidates
+        my_data = {
+        'y': test_data,
+        'candidates':my_cand
+        }
 
         my_suff_stat = self.E_step(anneal, model_params, my_data)
         my_logpj  = my_suff_stat['logpj']
@@ -243,12 +259,17 @@ class CAModel(Model):
         my_logpjc = my_logpj - my_corr[:, None]    # shape: (my_N, no_states)
         my_pjc    = np.exp(my_logpjc)              # shape: (my_N, no_states)
         my_denomc = my_pjc.sum(axis=1)             # shape: (my_N)
+        my_pjc = my_pjc/my_denomc[:,None]
+        my_logpjc += -np.log(my_denomc)[:,None]
         
-        idx = np.argsort(my_logpjc, axis=-1)[:, ::-1]
+        idx = np.argsort(my_logpjc, axis=-1)[:, -1:-(topK+1):-1]
         for n in xrange(my_N):                                   # XXX Vectorize XXX
-            for m in xrange(no_maps):
+            for m in xrange(topK):
                 this_idx = idx[n,m]
-                res['p'][n,m] = my_pjc[n, this_idx] / my_denomc[n]
+                if logprob:
+                    res['p'][n,m] = my_logpjc[n, this_idx] 
+                else:
+                    res['p'][n,m] = my_pjc[n, this_idx] 
                 if this_idx == 0:
                     pass
                 elif this_idx < (H+1):
