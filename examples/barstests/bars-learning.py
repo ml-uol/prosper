@@ -62,6 +62,8 @@ if __name__ == "__main__":
         'pi'    :  p_bar,
         'sigma' :  1.0
     }
+
+    params_gt = params.get('params_gt', params_gt)   
     my_data = model.generate_data(params_gt, N // comm.size)
 
     # Configure DataLogger
