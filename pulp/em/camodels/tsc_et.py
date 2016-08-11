@@ -361,7 +361,7 @@ class Ternary_ET(CAModel):
 
     @tracing.traced
     def inference(self, anneal, model_params, my_data, no_maps=10,abs_marginal=True):
-        W = model_params['W']
+        W = model_params['W'].T
         my_y = my_data['y']
         H, D = W.shape
         my_N, D = my_y.shape
@@ -370,7 +370,7 @@ class Ternary_ET(CAModel):
         if no_maps==-1:
             no_maps=self.state_matrix.shape[0]
         res = {
-            's': np.zeros( (my_N, no_maps, H), dtype=np.int),
+            's': np.zeros( (my_N, no_maps, H), dtype=np.int8),
             'm': np.zeros( (my_N, H) ),
             'am' : np.zeros( (my_N, H) ),
             'p': np.zeros( (my_N, no_maps) )
@@ -405,14 +405,18 @@ class Ternary_ET(CAModel):
         my_small_data={}
         my_small_data['y']=my_data['y'][which]
         my_small_data['candidates']=my_data['candidates'][which]
+        my_small_cand = my_small_data['candidates']
+        gamma_tmp= self.gamma
+        Hprime_tmp = self.Hprime
         while which.any():
             print "Data with activity gamma: {}".format(which.sum())
+            if self.gamma+1 == self.H:
+                continue
             self.gamma+=1
-            print "New gamma: {}".format(self.gamma)
-            if self.Hprime<self.gamma:
-                self.Hprime+=1
-                print "New Hprime: {}".format(self.Hprime)
+            self.Hprime+=1
             self._update_state_matrix()
+            my_small_data = self.select_Hprimes(model_params, my_small_data)
+            my_small_cand = my_small_data['candidates']
             my_suff_stat = self.E_step(anneal, model_params, my_small_data)
             my_logpj  = my_suff_stat['logpj']
             my_corr   = my_logpj.max(axis=1)           # shape: (my_N,)
@@ -424,18 +428,21 @@ class Ternary_ET(CAModel):
             my_N=np.sum(which)
             for n in xrange(my_N):                                   # XXX Vectorize XXX
                 for m in xrange(no_maps):
-                    this_idx = idx[n,m]
-                    res['p'][which][n,m] = my_pjc[n, this_idx] / my_denomc[n]
+                    higam_inds = np.where(which)[0]
+                    this_idx = idx[n,m]   #state matrix index of map m
+                    res['p'][higam_inds[n],m] = my_pjc[n, this_idx] / my_denomc[n]
                     s_prime = self.state_matrix[this_idx]
-                    res['s'][which][n,m,my_cand[n,:]] = s_prime
-                res['m'][which][n,my_cand[n,:]] = (my_pjc[n][:,None]*self.state_matrix/my_denomc[n]).sum(0)
+                    res['s'][higam_inds[n],m,my_small_cand[n,:]] = s_prime
+                res['m'][higam_inds[n],my_small_cand[n,:]] = (my_pjc[n][:,None]*self.state_matrix/my_denomc[n]).sum(0)
                 if abs_marginal:
-                    res['am'][which][n,my_cand[n,:]] = (my_pjc[n][:,None]*np.abs(self.state_matrix)/my_denomc[n]).sum(0)
+                    res['am'][higam_inds[n],my_small_cand[n,:]] = (my_pjc[n][:,None]*np.abs(self.state_matrix)/my_denomc[n]).sum(0)
             which = ((res['s'][:,0,:]!=0).sum(-1)==self.gamma)
             my_small_data['y']=my_data['y'][which]
             my_small_data['candidates']=my_data['candidates'][which]
 
-
+        self.gamma = gamma_tmp
+        self.Hprime = Hprime_tmp
+        self._update_state_matrix()
         return res
 
     def _update_state_matrix(self):
