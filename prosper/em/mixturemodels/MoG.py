@@ -116,7 +116,7 @@ class MoG(MixtureModel):
 
         W = model_params['W'].T
 
-        for n in xrange(my_N):
+        for n in range(my_N):
             comp = s[n]
             if self.sigmas_sq_type == 'full':
                 sigma = model_params['sigmas_sq'][comp].diagonal()

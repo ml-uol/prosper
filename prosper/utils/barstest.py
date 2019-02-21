@@ -1,4 +1,4 @@
-from __future__ import division
+
 
 import numpy as np
 
@@ -22,7 +22,7 @@ def generate_bars_dict(H, neg_bars=False):
     R = H // 2
     D = R ** 2
     W_gt = np.zeros((R, R, H))
-    for i in xrange(R):
+    for i in range(R):
         W_gt[i, :, i] = 1.
         W_gt[:, i, R + i] = 1.
 
@@ -39,7 +39,7 @@ def generate_bars_data(num, size, p_bar):
     """
     data = np.zeros((num, size, size))
 
-    for n in xrange(num):
+    for n in range(num):
         for i in range(size):
             # generate horizontal bar
             if np.random.random() <= p_bar:
@@ -73,14 +73,14 @@ def find_permutation(W, Wgt):
 
     MAEs = np.zeros((Hgt, H))
 
-    for i in xrange(Hgt):
-        for j in xrange(H):
+    for i in range(Hgt):
+        for j in range(H):
             MAEs[i, j] = np.sum(np.abs(Wgt[:, i] - W[:, j])) / D
 
     perm = np.zeros(Hgt, dtype=np.int)
 
     total_mae = 0.
-    for k in xrange(Hgt):
+    for k in range(Hgt):
         # Find best matching combination
         pos = np.argmin(MAEs)
 
@@ -117,8 +117,8 @@ def find_permutation2(W, Wgt):
     # Calculate error matrix
     error = np.zeros((Hgt, H))
 
-    for i in xrange(Hgt):
-        for j in xrange(H):
+    for i in range(Hgt):
+        for j in range(H):
             error[i, j] = np.sum(np.abs(Wgt[:, i] - W[:, j])) / D
 
     # Allocate tables for dynamic programming
@@ -126,7 +126,7 @@ def find_permutation2(W, Wgt):
     used_tab = np.empty((Hgt, H), dtype=np.object)
 
     # Initialize first row
-    for ht in xrange(H):
+    for ht in range(H):
         tmprow = error[0, :].copy()
         tmprow[ht] = np.inf
 
@@ -135,13 +135,13 @@ def find_permutation2(W, Wgt):
         used_tab[0, ht] = [minpos]
 
         # Build table
-    for hr in xrange(1, Hgt - 1):
-        for ht in xrange(H):
+    for hr in range(1, Hgt - 1):
+        for ht in range(H):
 
             # Build Matrix
             tmpmtx = np.zeros((Hgt, H))
-            for h0 in xrange(Hgt):
-                for h1 in xrange(H):
+            for h0 in range(Hgt):
+                for h1 in range(H):
                     val = mae_tab[hr - 1, h1] + error[hr, h0]
                     if h0 in used_tab[hr - 1, h1]:
                         val = np.inf
@@ -158,7 +158,7 @@ def find_permutation2(W, Wgt):
             used_tab[hr, ht] = used_tab[hr - 1, minpos_prev] + [minpos_error]
 
     # Last row
-    for ht in xrange(H):
+    for ht in range(H):
         mae_tab[-1, ht] = mae_tab[-2, ht] + error[-1, ht]
         used_tab[-1, ht] = used_tab[-2, ht] + [ht]
 

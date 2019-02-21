@@ -1,5 +1,5 @@
 
-from __future__ import division
+
 
 # import sys
 # sys.path.insert(0, '../..')
@@ -37,7 +37,7 @@ class TestBarstest(unittest.TestCase):
         Wgt = barstest.generate_bars_dict(H)
 
         # perform random permutation
-        for r in xrange(10):
+        for r in range(10):
             perm_gt = np.random.permutation(H)
             W = Wgt[:, perm_gt]
 

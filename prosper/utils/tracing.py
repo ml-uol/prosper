@@ -68,8 +68,8 @@ def traced(func):
         def some_function_or_method(...):
             # do something
     """
-    begin_str = func.func_name + ':begin'
-    end_str = func.func_name + ':end'
+    begin_str = func.__name__ + ':begin'
+    end_str = func.__name__ + ':end'
 
     @wraps(func)
     def wrapped(*args, **kwargs):
@@ -127,14 +127,14 @@ def close(archive=True, comm=MPI.COMM_WORLD):
 
         archive_fname = path.join(trace_dir, "traces.tgz")
         archive_cmd = ["tar", "-czf", archive_fname, "-C", trace_dir]
-        for rank in xrange(comm.size):
+        for rank in range(comm.size):
             archive_cmd.append(trace_tailname % rank)
         #print"Running ", archive_cmd
         subprocess.call(archive_cmd, stderr=subprocess.STDOUT)
 
         # Delete tracefiles
         rm_cmd = ["rm"]
-        for rank in xrange(comm.size):
+        for rank in range(comm.size):
             rm_cmd.append(trace_fname % rank)
         #print"Running ", rm_cmd
         subprocess.call(rm_cmd, stderr=subprocess.STDOUT)

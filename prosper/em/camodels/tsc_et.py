@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division
+
 
 import numpy as np
 from mpi4py import MPI
@@ -96,7 +96,7 @@ class Ternary_ET(CAModel):
         pil_bar=np.log(pi_matrix).sum(axis=1)
         F = np.empty( [my_N, l1] )
         pre_F = np.empty( [my_N, l1] )
-        for n in xrange(my_N):
+        for n in range(my_N):
             tracing.tracepoint("E_step:iterating")
             y    = data['y'][n,:]
             # Handle hidden states with more than 1 active cause
@@ -122,9 +122,9 @@ class Ternary_ET(CAModel):
         # Create output arrays, y is data, s is ground-truth
         y = np.zeros( (my_N, D) )
         s = np.zeros( (my_N, H), dtype=np.int8)
-        for n in xrange(my_N):
+        for n in range(my_N):
                 p = np.random.random(H)        # create latent vector
-                for i in xrange(H):
+                for i in range(H):
                         if (p[i]<(pi/2)):
                             s[n,i] = -1
                             y[n] += s[n,i]*W[i]
@@ -179,7 +179,7 @@ class Ternary_ET(CAModel):
         F       =   np.empty( [my_N, l1] )
         pre_F   =   np.empty( [my_N, l1] )
         # Iterate over all datapoints
-        for n in xrange(my_N):
+        for n in range(my_N):
             #tracing.tracepoint("E_step:iterating")
             y    = my_data['y'][n,:]
             cand = my_data['candidates'][n,:]
@@ -280,7 +280,7 @@ class Ternary_ET(CAModel):
 
 
         # Iterate over all datapoints
-        for n in xrange(my_N):
+        for n in range(my_N):
             #tracing.tracepoint("M_step:iterating")
             y     = my_y[n,:]                  # length D
             cand  = candidates[n,:] # length Hprime
@@ -322,7 +322,7 @@ class Ternary_ET(CAModel):
         if 'sigma' in self.to_learn:
             #tracing.tracepoint("M_step:update sigma")
             # Loop for sigma update:
-            for n in xrange(my_N):
+            for n in range(my_N):
                 #tracing.tracepoint("M_step:update sigma iteration")
                 y     = my_y[n,:]           # length D
                 cand  = candidates[n,:]     # length Hprime
@@ -390,8 +390,8 @@ class Ternary_ET(CAModel):
         
         idx = np.argsort(my_logpjc, axis=-1)[:, ::-1]
 
-        for n in xrange(my_N):                                   # XXX Vectorize XXX
-            for m in xrange(no_maps):
+        for n in range(my_N):                                   # XXX Vectorize XXX
+            for m in range(no_maps):
                 this_idx = idx[n,m]
                 res['p'][n,m] = my_pjc[n, this_idx] / my_denomc[n]
                 s_prime = self.state_matrix[this_idx]
@@ -409,7 +409,7 @@ class Ternary_ET(CAModel):
         gamma_tmp= self.gamma
         Hprime_tmp = self.Hprime
         while which.any():
-            print "Data with activity gamma: {}".format(which.sum())
+            print("Data with activity gamma: {}".format(which.sum()))
             if self.gamma+1 == self.H:
                 continue
             self.gamma+=1
@@ -426,8 +426,8 @@ class Ternary_ET(CAModel):
             
             idx = np.argsort(my_logpjc, axis=-1)[:, ::-1]
             my_N=np.sum(which)
-            for n in xrange(my_N):                                   # XXX Vectorize XXX
-                for m in xrange(no_maps):
+            for n in range(my_N):                                   # XXX Vectorize XXX
+                for m in range(no_maps):
                     higam_inds = np.where(which)[0]
                     this_idx = idx[n,m]   #state matrix index of map m
                     res['p'][higam_inds[n],m] = my_pjc[n, this_idx] / my_denomc[n]
@@ -449,7 +449,7 @@ class Ternary_ET(CAModel):
         l=len(self.states)
         icond=True
         Hprime = self.Hprime
-        for i in xrange(0,l):
+        for i in range(0,l):
             if (self.states[i]==0):
                 continue
             if icond:
@@ -480,4 +480,4 @@ class Ternary_ET(CAModel):
         self.state_matrix = s[np.sum(np.abs(s),axis=1)<=self.gamma]
         self.no_states=s.shape[0]
         self.state_abs=states_abs
-        print "state matrix updated"
+        print("state matrix updated")

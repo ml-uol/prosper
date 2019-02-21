@@ -48,7 +48,7 @@ def create_output_path(basename=None):
         while True:
             try:
                 os.makedirs(dirname)
-            except OSError, e:
+            except OSError as e:
                 if e.errno != errno.EEXIST:
                     raise e
                 suffix_counter += 1

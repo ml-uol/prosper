@@ -3,7 +3,7 @@
 #  Lincense: Academic Free License (AFL) v3.0
 #
 
-from __future__ import division
+
 
 import numpy as np
 from math import pi
@@ -71,10 +71,10 @@ class MCA_ET(CAModel):
         y = np.zeros( (my_N, D) )
         s = np.zeros( (my_N, H), dtype=np.bool )
 
-        for n in xrange(my_N):
+        for n in range(my_N):
             p = np.random.random(H)        # Create latent vector
             s[n] = p < pies                # Translate into boolean latent vector
-            for h in xrange(H):            # Combine according to max-rule
+            for h in range(H):            # Combine according to max-rule
                 if s[n,h]:
                     y[n] = np.maximum(y[n], W[h])
 
@@ -101,7 +101,7 @@ class MCA_ET(CAModel):
         candidates = np.zeros( (my_N, Hprime), dtype=np.int )
         
         #TODO: When using different pies this should be changed!
-        for n in xrange(my_N):
+        for n in range(my_N):
             W_interm = np.maximum(W, my_y[n])
             sim = np.abs(W_interm-my_y[n]).sum(axis=1)
             candidates[n] = np.argsort(sim)[0:Hprime]
@@ -153,7 +153,7 @@ class MCA_ET(CAModel):
         F = np.empty( [my_N, 1+H+no_states] )
 
         # Iterate over all datapoints
-        for n in xrange(my_N):
+        for n in range(my_N):
             tracing.tracepoint("E_step:iterating")
             y    = my_y[n,:]
             cand = my_cand[n,:]
@@ -239,7 +239,7 @@ class MCA_ET(CAModel):
 
         # Precompute factor for pi/gamma update
         A_pi_gamma = 0.; B_pi_gamma = 0.
-        for gp in xrange(0, self.gamma+1):
+        for gp in range(0, self.gamma+1):
             a = comb(H, gp, exact=1) * pies**gp * (1.-pies)**(H-gp)
             A_pi_gamma += a
             B_pi_gamma += gp * a
@@ -271,7 +271,7 @@ class MCA_ET(CAModel):
         my_sigma = 0.0               #
 
         # Iterate over all datapoints
-        for n in xrange(my_N):
+        for n in range(my_N):
             tracing.tracepoint("M_step:iterating")
             y     = my_y[n,:]             # shape (D,)
             cand  = my_cand[n,:]          # shape (Hprime,)

@@ -7,7 +7,7 @@
 # A Truncated EM Approach for Spike-and-Slab Sparse 
 # Coding. JMLR (accepted, 2014).
 
-from __future__ import division
+
 
 import numpy as np
 from math import pi
@@ -180,7 +180,7 @@ class GSC(CAModel):
 
             if self.sigma_sq_type == 'full':
                 assert np.isfinite(model_params['sigma_sq']).all()  # check sigma_sq
-                assert np.sum(model_params['sigma_sq'][range(self.D),range(self.D)] <= 0) == 0
+                assert np.sum(model_params['sigma_sq'][list(range(self.D)),list(range(self.D))] <= 0) == 0
             elif self.sigma_sq_type == 'diagonal':
                 assert np.isfinite(model_params['sigma_sq']).all()  # check sigma_sq
                 assert np.sum(model_params['sigma_sq'] <= 0) == 0
@@ -202,7 +202,7 @@ class GSC(CAModel):
         # Create ground-truth s
         s = np.zeros( (my_N, H), dtype=np.bool )
 
-        for n in xrange(my_N):
+        for n in range(my_N):
             
             p = np.random.random(H)        # create a latent vector
             s[n] = p <= model_params['pi']                # translate into a boolean latent vector
@@ -236,7 +236,7 @@ class GSC(CAModel):
         else:# 'scalar'
             sigma_sq = np.sqrt(model_params['sigma_sq']) * np.ones(D)
 
-        for n in xrange(my_N):
+        for n in range(my_N):
             
             # active component indexes 
             actv_comps_inds = np.nonzero(s[n])[0]
@@ -409,7 +409,7 @@ class GSC(CAModel):
         D = self.D
         H         = self.H
         my_N      = 0
-        for cluster_key in data_clusters.iterkeys():
+        for cluster_key in data_clusters.keys():
             data_cluster = data_clusters[cluster_key]
             my_N += data_cluster['data'].shape[0]
 
@@ -441,7 +441,7 @@ class GSC(CAModel):
         tiny = np.finfo(np.float64).tiny
         
         
-        for cluster_key in data_clusters.iterkeys():
+        for cluster_key in data_clusters.keys():
             cur_cluster = data_clusters[cluster_key]
             cur_comps = cur_cluster['hprimes']
             cur_W = np.array(model_params['W'][:,cur_comps])

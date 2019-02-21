@@ -3,7 +3,7 @@
 #  Lincense: Academic Free License (AFL) v3.0
 #
 
-from __future__ import division
+
 
 import numpy as np
 from math import pi
@@ -78,7 +78,7 @@ class MMCA_ET(CAModel):
         # Create output arrays, y is data
         y = np.zeros( (my_N, D) )
 
-        for n in xrange(my_N):
+        for n in range(my_N):
             # Combine accoring do magnitude-max rule
             t0 = s[n, :, None] * W              # (H, D)  "stacked" version of a datapoint
             idx = np.argmax(np.abs(t0), axis=0) # Find maximum magnitude in stack 
@@ -112,7 +112,7 @@ class MMCA_ET(CAModel):
         # Allocate return structure
         candidates = np.zeros( (my_N, Hprime), dtype=np.int )
         
-        for n in xrange(my_N):
+        for n in range(my_N):
             #W_interm = np.maximum(W, my_y[n])
             #sim = np.abs(W_interm-my_y[n]).sum(axis=1)
             sim = ((W-my_y[n])**2).sum(axis=1)
@@ -172,7 +172,7 @@ class MMCA_ET(CAModel):
 
         # Iterate over all datapoints
         tracing.tracepoint("E_step:iterating...")
-        for n in xrange(my_N):
+        for n in range(my_N):
             y    = my_y[n,:]
             cand = my_cand[n,:]
 
@@ -267,7 +267,7 @@ class MMCA_ET(CAModel):
 
         # Precompute factor for pi update and ET cutting
         A_pi_gamma = 0.; B_pi_gamma = 0.
-        for gp in xrange(0, self.gamma+1):
+        for gp in range(0, self.gamma+1):
             a = comb(H, gp) * pies**gp * (1.-pies)**(H-gp)
             A_pi_gamma += a
             B_pi_gamma += gp * a

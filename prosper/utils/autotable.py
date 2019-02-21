@@ -114,7 +114,7 @@ class AutoTable:
                             type(value))
 
         # Check if we need to create a new table
-        if not self.tables.has_key(name):
+        if name not in self.tables:
             self._create_table(name, value)
 
         value = value.reshape((1, ) + value.shape)
@@ -154,11 +154,11 @@ class AutoTable:
             raise TypeError("Don't know how to handle values of type '%s'",
                             type(value))
 
-        if not self.tables.has_key(name):
+        if name not in self.tables:
             pass
         else:
             if self.warnings:
-                print "Warning! The previous data with key %s is being overwritten" % name
+                print("Warning! The previous data with key %s is being overwritten" % name)
             self._delete_table(name)
 
         try:
@@ -184,7 +184,7 @@ class AutoTable:
 
         >>> tbl.append( { 't':0.23 , 'D':np.zeros((10,10)) )
         """
-        for name, value in valdict.items():
+        for name, value in list(valdict.items()):
             self.append(name, value)
 
     def appendList(self, name, value):
@@ -211,7 +211,7 @@ class AutoTable:
                             type(value))
 
         # Check if we need to create a new table
-        if not self.tables.has_key(name):
+        if name not in self.tables:
             self._create_table_list(name, value)
 
         value = value.reshape(value.shape)
@@ -339,7 +339,7 @@ class AutoTable:
         Removing the numpy specific operation in appending
         """
         # Check if we need to create a new table
-        if not self.tables.has_key(name):
+        if name not in self.tables:
             self._create_table(name, value)
 
         try:
@@ -357,11 +357,11 @@ class AutoTable:
         Removing the numpy specific operation in appending
         """
         # Check if we need to create a new table
-        if not self.tables.has_key(name):
+        if name not in self.tables:
             self._create_table_list(name, value)
 
         try:
-            map(self.tables[name].append, value)
+            list(map(self.tables[name].append, value))
         except ValueError:
             raise TypeError('Wrong datatype for "%s" field' % name)
 

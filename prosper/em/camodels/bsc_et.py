@@ -4,7 +4,7 @@
 #  Lincense: Academic Free License (AFL) v3.0
 #
 
-from __future__ import division
+
 
 import numpy as np
 from math import pi
@@ -45,9 +45,9 @@ class BSC_ET(CAModel):
         # Create output arrays, y is data
         y = np.zeros( (my_N, D) )
 
-        for n in xrange(my_N):
+        for n in range(my_N):
             # Combine accoring do magnitude-max rulew
-            for h in xrange(H):
+            for h in range(H):
                 if s[n,h]:
                     y[n] += W[h]
 
@@ -70,7 +70,7 @@ class BSC_ET(CAModel):
         my_N, D = my_y.shape
 
         candidates = np.zeros( (my_N, Hprime), dtype=np.int )
-        for n in xrange(my_N):
+        for n in range(my_N):
             sim = np.inner(W,my_y[n])/ np.sqrt(np.diag(np.inner(W,W)))/ np.sqrt(np.inner(my_y[n],my_y[n]))
             candidates[n] = np.argsort(sim)[-Hprime:]
         
@@ -128,7 +128,7 @@ class BSC_ET(CAModel):
         
         # Iterate over all datapoints
         tracing.tracepoint("E_step:iterating")
-        for n in xrange(my_N):
+        for n in range(my_N):
             y    = my_data['y'][n,:] - mu
             cand = my_data['candidates'][n,:]
 
@@ -294,7 +294,7 @@ class BSC_ET(CAModel):
 
         # Iterate over all datapoints
         tracing.tracepoint("M_step:iterating")
-        for n in xrange(my_N):
+        for n in range(my_N):
             y     = my_y[n,:]-mu                  # length D
             cand  = candidates[n,:] # length Hprime
             pjb   = pjb_all[n, :]
@@ -352,7 +352,7 @@ class BSC_ET(CAModel):
         if 'sigma' in self.to_learn:
             tracing.tracepoint("M_step:update sigma")
             # Loop for sigma update:
-            for n in xrange(my_N):
+            for n in range(my_N):
                 y     = my_y[n,:]-mu           # length D
                 cand  = candidates[n,:]     # length Hprime
                 logpj = logpj_all[n,:]      # length no_states

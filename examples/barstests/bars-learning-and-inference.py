@@ -3,7 +3,7 @@
 #  Lincense: Academic Free License (AFL) v3.0
 #
 
-from __future__ import division
+
 
 import sys
 sys.path.insert(0, '../..')
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     param_fname = sys.argv[1]
 
     params = {}
-    execfile(param_fname, params)
+    exec(compile(open(param_fname).read(), param_fname, 'exec'), params)
 
     # Extract some parameters
     N = params.get('N', 5000)            # no. of datapoint in the testset

@@ -15,8 +15,8 @@ from time import strftime
 from mpi4py import MPI
 import numpy as np
 
-from parallel import pprint
-from autotable import AutoTable
+from .parallel import pprint
+from .autotable import AutoTable
 
 comm = MPI.COMM_WORLD
 
@@ -24,8 +24,7 @@ comm = MPI.COMM_WORLD
 # DataHandler (AbstractBaseClass)
 
 
-class DataHandler(object):
-    __metaclass__ = ABCMeta
+class DataHandler(object, metaclass=ABCMeta):
     """ Base class for handler which can be set to handle incoming data by DataLog."""
 
     def __init__(self):
@@ -40,7 +39,7 @@ class DataHandler(object):
         pass
 
     def append_all(self, valdict):
-        for key, val in valdict.items():
+        for key, val in list(valdict.items()):
             self.append(key, val)
 
     def remove(self, tblname):
@@ -121,7 +120,7 @@ class StoreToTxt(DataHandler):
         self.txt_file.write("%s = %s\n" % (tblname, value))
 
     def append_all(self, valdict):
-        for entry in valdict.keys():
+        for entry in list(valdict.keys()):
             self.txt_file.write("%s = %s\n" % (entry, valdict[entry]))
 
     def close(self):
@@ -141,7 +140,7 @@ class TextPrinter(DataHandler):
         pprint("  %8s = %s " % (tblname, value))
 
     def append_all(self, valdict):
-        for (name, val) in valdict.items():
+        for (name, val) in list(valdict.items()):
             pprint("  %8s = %s \n" % (name, val), end="")
 
 #=============================================================================
@@ -175,13 +174,13 @@ class DataLog:
             return
 
         if completed == None:
-            print "[%s] %s" % (strftime("%H:%M:%S"), message)
+            print("[%s] %s" % (strftime("%H:%M:%S"), message))
         else:
             totlen = 65 - len(message)
             barlen = int(totlen * completed)
             spacelen = totlen - barlen
-            print "[%s] %s [%s%s]" % (strftime("%H:%M:%S"), message, "*" *
-                                      barlen, "-" * spacelen)
+            print("[%s] %s [%s%s]" % (strftime("%H:%M:%S"), message, "*" *
+                                      barlen, "-" * spacelen))
 
     def append(self, tblname, value):
         """ Append the given value and call all the configured DataHandlers."""
@@ -202,7 +201,7 @@ class DataLog:
 
         # Construct a set with all handlers to be called
         all_handlers = set()
-        for tblname, val in valdict.items():
+        for tblname, val in list(valdict.items()):
             hl = self._lookup(tblname)
             all_handlers = all_handlers.union(hl)
 
@@ -211,7 +210,7 @@ class DataLog:
             # is interested in
         for handler in all_handlers:
             argdict = {}
-            for tblname, val in valdict.items():
+            for tblname, val in list(valdict.items()):
                 hl = self._lookup(tblname)
 
                 if handler in hl:
@@ -302,7 +301,7 @@ class DataLog:
         if self.gui_proc is not None:
             if quit_gui:
                 packet = {'cmd': 'quit', 'vizid': 0}
-                print "Sending quit!"
+                print("Sending quit!")
                 self.gui_queue.put(packet)
             self.gui_proc.join()
 

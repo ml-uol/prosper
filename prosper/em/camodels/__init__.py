@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division
+
 
 import numpy as np
 from mpi4py import MPI
@@ -17,8 +17,7 @@ from prosper.em import Model
 #=============================================================================#
 # Abstract base class for component analysis models
 
-class CAModel(Model):
-    __metaclass__ = ABCMeta
+class CAModel(Model, metaclass=ABCMeta):
     """ Abstract base class for Sparse Coding models with binary latent variables
         and expectation tuncation (ET) based training scheme.
     
@@ -70,8 +69,8 @@ class CAModel(Model):
 
         # Generate state-space list
         sl = []
-        for g in xrange(2,gamma+1):
-            for s in combinations(range(Hprime), g):
+        for g in range(2,gamma+1):
+            for s in combinations(list(range(Hprime)), g):
                 sl.append( np.array(s, dtype=np.int8) )
         self.state_list = sl
 
@@ -80,7 +79,7 @@ class CAModel(Model):
         
         # Generate state-matrix
         sm = np.zeros((no_states, Hprime), dtype=np.uint8)
-        for i in xrange(no_states):
+        for i in range(no_states):
             s = sl[i]
             sm[i, s] = 1
         self.state_matrix = sm
@@ -131,7 +130,7 @@ class CAModel(Model):
 
         # Construct partial my_pdata...
         my_pdata = {}
-        for key, val in my_data.items():
+        for key, val in list(my_data.items()):
             my_pdata[key] = val[sel]
 
         return my_pdata
@@ -263,8 +262,8 @@ class CAModel(Model):
         my_logpjc += -np.log(my_denomc)[:,None]
         
         idx = np.argsort(my_logpjc, axis=-1)[:, -1:-(topK+1):-1]
-        for n in xrange(my_N):                                   # XXX Vectorize XXX
-            for m in xrange(topK):
+        for n in range(my_N):                                   # XXX Vectorize XXX
+            for m in range(topK):
                 this_idx = idx[n,m]
                 if logprob:
                     res['p'][n,m] = my_logpjc[n, this_idx] 
