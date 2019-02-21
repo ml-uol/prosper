@@ -3,7 +3,7 @@
 #  Lincense: Academic Free License (AFL) v3.0
 #
 """
-    The pulp.utils packages provides various utility functions and classes.
+    The prosper.utils packages provides various utility functions and classes.
 """
 import time as tm
 import numpy as np

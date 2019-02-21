@@ -13,7 +13,7 @@ from __future__ import division
 import sys
 sys.path.insert(0, '..')
 
-from pulp.em.annealing import LinearAnnealing
+from prosper.em.annealing import LinearAnnealing
 
 Tsteps = 80
 Tstart = 20

@@ -9,9 +9,9 @@ sys.path.insert(0, "..")
 from time import sleep
 import numpy as np
 
-from pulp.utils.parallel import pprint
-from pulp.utils.datalog import dlog, StoreToH5, TextPrinter
-from pulp.visualize.gui import GUI, RFViewer, YTPlotter
+from prosper.utils.parallel import pprint
+from prosper.utils.datalog import dlog, StoreToH5, TextPrinter
+from prosper.visualize.gui import GUI, RFViewer, YTPlotter
 
 # Parameters
 rf_shape = (26, 26)

@@ -7,10 +7,10 @@
 import numpy as np
 from mpi4py import MPI
 
-import pulp.utils.tracing as tracing
+import prosper.utils.tracing as tracing
 
-from pulp.utils.datalog import dlog
-from pulp.em.mixturemodels import MixtureModel
+from prosper.utils.datalog import dlog
+from prosper.em.mixturemodels import MixtureModel
 
 class MoG(MixtureModel):
 

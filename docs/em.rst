@@ -2,6 +2,6 @@
 Expactation Maximization infrastructure
 =======================================
 
-.. automodule:: pulp.em
+.. automodule:: prosper.em
     :members:
 

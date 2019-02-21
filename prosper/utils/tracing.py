@@ -8,7 +8,7 @@ Record tracepoint for runtime profiling/tracing.
 
 
 Usage::
-    import pulp.utils.tracing as tracing
+    import prosper.utils.tracing as tracing
 
     tracing.set_tracefile()
 

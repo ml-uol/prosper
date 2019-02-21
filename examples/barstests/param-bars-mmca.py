@@ -1,5 +1,5 @@
 import numpy as np
-from pulp.utils.barstest import generate_bars_dict
+from prosper.utils.barstest import generate_bars_dict
 
 # Number of datapoints to generate
 N = 1000
@@ -19,7 +19,7 @@ Hprime = 8
 gamma = 5
  
 # Import and instantiate a model
-from pulp.em.camodels.mmca_et import MMCA_ET
+from prosper.em.camodels.mmca_et import MMCA_ET
 model = MMCA_ET(D, H, Hprime, gamma)
 
 

@@ -8,17 +8,17 @@ sys.path.insert(0, '..')
 import numpy as np
 from mpi4py import MPI
 
-from pulp.utils import create_output_path 
-from pulp.utils.autotable import AutoTable
-from pulp.utils.parallel import pprint, stride_data
-from pulp.utils.barstest import generate_bars
+from prosper.utils import create_output_path 
+from prosper.utils.autotable import AutoTable
+from prosper.utils.parallel import pprint, stride_data
+from prosper.utils.barstest import generate_bars
 
-from pulp.utils.datalog import dlog, StoreToH5, TextPrinter, StoreToTxt
-from pulp.visualize.gui import GUI, RFViewer, YTPlotter
+from prosper.utils.datalog import dlog, StoreToH5, TextPrinter, StoreToTxt
+from prosper.visualize.gui import GUI, RFViewer, YTPlotter
 
-from pulp.em import EM
-from pulp.em.annealing import LinearAnnealing
-from pulp.em.camodels.bsc_et import BSC_ET
+from prosper.em import EM
+from prosper.em.annealing import LinearAnnealing
+from prosper.em.camodels.bsc_et import BSC_ET
 
 
 #=============================================================================

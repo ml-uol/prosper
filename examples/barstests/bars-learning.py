@@ -11,14 +11,14 @@ sys.path.insert(0, '../..')
 import numpy as np
 from mpi4py import MPI
 
-from pulp.utils import create_output_path 
-from pulp.utils.parallel import pprint, stride_data
+from prosper.utils import create_output_path 
+from prosper.utils.parallel import pprint, stride_data
 
-from pulp.utils.barstest import generate_bars_dict
-from pulp.utils.datalog import dlog, StoreToH5, TextPrinter, StoreToTxt
+from prosper.utils.barstest import generate_bars_dict
+from prosper.utils.datalog import dlog, StoreToH5, TextPrinter, StoreToTxt
 
-from pulp.em import EM
-from pulp.em.annealing import LinearAnnealing
+from prosper.em import EM
+from prosper.em.annealing import LinearAnnealing
 
 # Main
 if __name__ == "__main__":

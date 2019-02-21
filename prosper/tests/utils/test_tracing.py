@@ -1,5 +1,5 @@
 """
-Testcases for the pulp.utils package
+Testcases for the prosper.utils package
 """
 
 import os.path
@@ -8,7 +8,7 @@ import shutil
 import numpy as np
 import unittest
 
-import pulp.utils.tracing as tracing
+import prosper.utils.tracing as tracing
 
 #=============================================================================
 # traceing tests

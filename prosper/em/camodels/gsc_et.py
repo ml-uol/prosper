@@ -18,12 +18,12 @@ try:
 except ImportError:
     from scipy.misc import comb
 
-import pulp.em as em
-import pulp.utils.parallel as parallel
-import pulp.utils.tracing as tracing
+import prosper.em as em
+import prosper.utils.parallel as parallel
+import prosper.utils.tracing as tracing
 
-from pulp.utils.datalog import dlog
-from pulp.em.camodels import CAModel
+from prosper.utils.datalog import dlog
+from prosper.em.camodels import CAModel
 from scipy import stats
 from tables import openFile
 

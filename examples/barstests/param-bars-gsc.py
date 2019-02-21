@@ -1,4 +1,4 @@
-from pulp.utils.barstest import generate_bars_dict
+from prosper.utils.barstest import generate_bars_dict
 import numpy as np
 
 np.random.seed(1)
@@ -33,7 +33,7 @@ sigma_sq_type = 'scalar' # defaul noise is assumed to be scalar
                          # Should be avoided for large D.
 
 # Import and instantiate a model
-from pulp.em.camodels.gsc_et import GSC
+from prosper.em.camodels.gsc_et import GSC
 model = GSC(D, H, Hprime, gamma, sigma_sq_type)
 
 

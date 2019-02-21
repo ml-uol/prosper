@@ -14,7 +14,7 @@ These files can later be opened
 Basic example::
 
     import numpy as np
-    from pulp.utils import autotable
+    from prosper.utils import autotable
 
     tbl = autotable.AutoTable('~/testhdf.h5')
     for t in range(10):

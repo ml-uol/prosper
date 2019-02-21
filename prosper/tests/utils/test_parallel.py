@@ -3,7 +3,7 @@ import unittest
 
 from mpi4py import MPI
 
-import pulp.utils.parallel as parallel
+import prosper.utils.parallel as parallel
 
 
 class TestParallel(unittest.TestCase):

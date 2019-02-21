@@ -15,11 +15,11 @@ from scipy import stats
 
 from abc import ABCMeta, abstractmethod
 
-import pulp.utils.tracing as tracing
-import pulp.utils.parallel as parallel
+import prosper.utils.tracing as tracing
+import prosper.utils.parallel as parallel
 
-from pulp.em import Model
-from pulp.utils.datalog import dlog
+from prosper.em import Model
+from prosper.utils.datalog import dlog
 
 
 #=============================================================================#

@@ -25,9 +25,9 @@ Software dependencies
 Overview
 ========
 
-pulp/       - Python library/framework for MPI parallelized 
+prosper/       - Python library/framework for MPI parallelized 
               EM-based algorithms. The models' implementations
-              can be found in pulp/em/camodels/.
+              can be found in prosper/em/camodels/.
 
 examples/   - Small examples for initializing and running the models
 

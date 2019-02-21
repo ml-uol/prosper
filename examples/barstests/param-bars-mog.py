@@ -1,4 +1,4 @@
-from pulp.utils.barstest import generate_bars
+from prosper.utils.barstest import generate_bars
 import numpy as np
 
 # Filename for training data and ground truth parameters
@@ -20,7 +20,7 @@ D=size**2    # dimensionality of observed data
 sigmas_sq_type = 'diagonal'
 
 # Import and instantiate a model
-from pulp.em.mixturemodels.MoG import MoG
+from prosper.em.mixturemodels.MoG import MoG
 
 model = MoG(D, H, sigmas_sq_type = sigmas_sq_type)
 

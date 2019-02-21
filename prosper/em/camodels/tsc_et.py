@@ -8,13 +8,13 @@ import itertools as itls
 from scipy.misc import comb
 
 
-import pulp.utils.parallel as parallel
-# from pulp.utils.parallel import pprint as pp #use for debugging 
-import pulp.utils.tracing as tracing
+import prosper.utils.parallel as parallel
+# from prosper.utils.parallel import pprint as pp #use for debugging 
+import prosper.utils.tracing as tracing
 
-from pulp.utils.datalog import dlog
-from pulp.em.camodels import CAModel
-from pulp.em import Model
+from prosper.utils.datalog import dlog
+from prosper.em.camodels import CAModel
+from prosper.em import Model
 
 
 class Ternary_ET(CAModel):

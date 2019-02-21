@@ -9,7 +9,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import time
 
-from pulp.utils.datalog import dlog
+from prosper.utils.datalog import dlog
 
 class Annealing():
     """ Base class for implementations of annealing schemes.

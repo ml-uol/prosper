@@ -8,7 +8,7 @@ from mpi4py import MPI
 import numpy as np
 import unittest
 
-import pulp.utils.barstest as barstest
+import prosper.utils.barstest as barstest
 
 
 class TestBarstest(unittest.TestCase):

@@ -8,11 +8,11 @@ from mpi4py import MPI
 from itertools import combinations
 from abc import ABCMeta, abstractmethod
 
-import pulp.utils.tracing as tracing
-import pulp.utils.parallel as parallel
+import prosper.utils.tracing as tracing
+import prosper.utils.parallel as parallel
 
-from pulp.utils.datalog import dlog
-from pulp.em import Model
+from prosper.utils.datalog import dlog
+from prosper.em import Model
 
 #=============================================================================#
 # Abstract base class for component analysis models
@@ -223,7 +223,7 @@ class CAModel(Model):
         """
         Perform inference with the learned model on test data and return the top K configurations with their posterior probabilities. 
         :param anneal: Annealing schedule, e.g., em.anneal 
-        :type  anneal: pulp.em.annealling.Annealing
+        :type  anneal: prosper.em.annealling.Annealing
         :param model_params: Learned model parameters, e.g., em.lparams 
         :type  model_params: dict
         :param candidates: The list of candidate binary configurations, e.g., my_data['candidates'] 
@@ -284,7 +284,7 @@ class CAModel(Model):
         """
         Perform inference with the learned model on test data and return the top K configurations with their posterior probabilities. 
         :param anneal: Annealing schedule, e.g., em.anneal 
-        :type  anneal: pulp.em.annealling.Annealing
+        :type  anneal: prosper.em.annealling.Annealing
         :param model_params: Learned model parameters, e.g., em.lparams 
         :type  model_params: dict
         :param candidates: The list of candidate binary configurations, e.g., my_data['candidates'] 

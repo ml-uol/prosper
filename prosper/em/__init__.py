@@ -11,10 +11,10 @@ from mpi4py import MPI
 
 from abc import ABCMeta, abstractmethod
 
-import pulp.utils.tracing as tracing
-import pulp.utils.parallel as parallel
+import prosper.utils.tracing as tracing
+import prosper.utils.parallel as parallel
 
-from pulp.utils.datalog import dlog
+from prosper.utils.datalog import dlog
 
 
 #=============================================================================

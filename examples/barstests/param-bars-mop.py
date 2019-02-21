@@ -1,4 +1,4 @@
-from pulp.utils.barstest import generate_bars
+from prosper.utils.barstest import generate_bars
 import numpy as np
 
 # Filename for training data and ground truth parameters
@@ -20,7 +20,7 @@ A = np.nan # default setting with no normalization of the data
 #A = 10*D # switch on the data normalization. The normalization constant A has to be greater than D
 
 # Import and instantiate a model
-from pulp.em.mixturemodels.MoP import MoP
+from prosper.em.mixturemodels.MoP import MoP
 
 model = MoP(D, H, A = A)
 

@@ -3,7 +3,7 @@
 
 import os
 from setuptools import setup
-from pulp.__version__ import __VERSION__
+from prosper.__version__ import __VERSION__
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
@@ -16,12 +16,12 @@ setup(name='ProSper',
       author='Jorg Bornschein, Abdul-Saboor Sheikh, Zhenwen Dai, Georgios Exarchakis, Marc Henniges, Julian Eggert, Jorg Lucke',
       author_email='bornj@iro.umontreal.ca',
       license='AFL3',
-      packages=['pulp',
-                'pulp.em',
-                'pulp.utils',
-                'pulp.em.camodels',
-                'pulp.em.mixturemodels'],
-      package_dir={'pulp': 'pulp'},
+      packages=['prosper',
+                'prosper.em',
+                'prosper.utils',
+                'prosper.em.camodels',
+                'prosper.em.mixturemodels'],
+      package_dir={'prosper': 'prosper'},
       long_description=read('README.md'),
       install_requires=['numpy>=1.7', 'scipy>=0.12','tables','nose>= 1.2','mpi4py'],
       classifiers=['License :: OSI Approved :: BSD License',

@@ -10,17 +10,21 @@ from math import pi
 from scipy.misc import comb
 from mpi4py import MPI
 
-import pulp.em as em
-import pulp.utils.parallel as parallel
-import pulp.utils.tracing as tracing
+import prosper.em as em
+import prosper.utils.parallel as parallel
+import prosper.utils.tracing as tracing
+import prosper.utils.accel as accel
 
-from pulp.utils.datalog import dlog
-from pulp.em.camodels import CAModel
+from prosper.utils.datalog import dlog
+from prosper.em.camodels import CAModel
+
+from prosper.utils.autotable import AutoTable
 
 
-class MCA_ET(CAModel):
+
+class MMCA_ET(CAModel):
     def __init__(self, D, H, Hprime, gamma, to_learn=['W', 'pi', 'sigma'], comm=MPI.COMM_WORLD):
-        """ MCA-ET init method.
+        """ MMCA-ET init method.
 
         Takes data dimension *D*, number of hidden causes *H*, 
         and ET approximation parameters *Hprime* and *gamma*. Optional
@@ -29,15 +33,17 @@ class MCA_ET(CAModel):
         CAModel.__init__(self, D, H, Hprime, gamma, to_learn, comm)
             
         # 
-        self.rho_temp_bound = 1.05    # for rho: never use a T smaller than this
-        self.W_tol = 1e-4             # for W: ensure W[W<W_tol] = W_tol
+        self.rho_T_bound = 1.20       # for rho: never use a T smaller than this
+        self.rho_lbound = 1           # for rho: never use a rho smaller than this
+        self.rho_ubound = 35          # for rho: never use a rho larger than this
+        self.tol = 1e-4               # for W: ensure W[W<tol] = tol
 
         # Noise Policy
-        W_tol = self.W_tol
+        tol = self.tol
         self.noise_policy = {
-            'W'    : ( W_tol,   +np.inf, True            ),
-            'pi'   : ( W_tol,   1-W_tol, False           ),
-            'sigma': ( W_tol,   +np.inf, False           )
+            'W'    : ( -np.inf,   +np.inf, False           ),
+            'pi'   : (     tol,     1-tol, False           ),
+            'sigma': (     tol,   +np.inf, False           )
         }
 
     @tracing.traced
@@ -46,44 +52,45 @@ class MCA_ET(CAModel):
         Sanity-check the given model parameters. Raises an exception if something 
         is severely wrong.
         """
-        # XXX
-        model_params = CAModel.check_params(self, model_params)
+        tol = self.tol
+        W = model_params['W'].T
 
-        # Obey W_tol
-        model_params['W'] = np.maximum(model_params['W'], self.W_tol)  
+        # Ensure |W| >= tol
+        W[np.logical_and(W >= 0., W < +tol)] = +tol
+        W[np.logical_and(W <= 0., W > -tol)] = -tol
 
         return model_params
 
     @tracing.traced
-    def generate_data(self, model_params, my_N):
-        """ Generate data according to the MCA model.
-
-        This method does _not_ obey gamma: The generated data may have more
-        than gamma active causes for a given datapoint.
+    def generate_from_hidden(self, model_params, my_hdata):
+        """ 
+            Generate data according to the MCA model while the latents are 
+            given in my_hdata['s'].
         """
-        H, D = self.H, self.D
-
         W     = model_params['W'].T
         pies  = model_params['pi']
         sigma = model_params['sigma']
+        H, D  = W.shape
 
-        # Create output arrays, y is data, s is ground-truth
+        s       = my_hdata['s']
+        my_N, _ = s.shape
+        
+        # Create output arrays, y is data
         y = np.zeros( (my_N, D) )
-        s = np.zeros( (my_N, H), dtype=np.bool )
 
         for n in xrange(my_N):
-            p = np.random.random(H)        # Create latent vector
-            s[n] = p < pies                # Translate into boolean latent vector
-            for h in xrange(H):            # Combine according to max-rule
-                if s[n,h]:
-                    y[n] = np.maximum(y[n], W[h])
+            # Combine accoring do magnitude-max rule
+            t0 = s[n, :, None] * W              # (H, D)  "stacked" version of a datapoint
+            idx = np.argmax(np.abs(t0), axis=0) # Find maximum magnitude in stack 
+            y[n] = t0[idx].diagonal()           # Collaps it
 
         # Add noise according to the model parameters
         y += np.random.normal( scale=sigma, size=(my_N, D) )
 
         # Build return structure
         return { 'y': y, 's': s }
-        
+
+    
     @tracing.traced
     def select_Hprimes(self, model_params, data):
         """
@@ -97,16 +104,22 @@ class MCA_ET(CAModel):
         H, Hprime = self.H, self.Hprime
         W         = model_params['W'].T
 
+        #if self.last_candidates is not None:
+        #    print "Reusing candidates"
+        #    data['candidates'] = self.last_candidates
+        #    return data
+
         # Allocate return structure
         candidates = np.zeros( (my_N, Hprime), dtype=np.int )
         
-        #TODO: When using different pies this should be changed!
         for n in xrange(my_N):
-            W_interm = np.maximum(W, my_y[n])
-            sim = np.abs(W_interm-my_y[n]).sum(axis=1)
+            #W_interm = np.maximum(W, my_y[n])
+            #sim = np.abs(W_interm-my_y[n]).sum(axis=1)
+            sim = ((W-my_y[n])**2).sum(axis=1)
             candidates[n] = np.argsort(sim)[0:Hprime]
 
         data['candidates'] = candidates
+        #self.last_candidates = candidates
 
         return data
 
@@ -139,22 +152,27 @@ class MCA_ET(CAModel):
         pies      = model_params['pi']
         sigma     = model_params['sigma']
 
+        # Disable some warnings
+        old_seterr = np.seterr(divide='ignore', under='ignore')
+
         # Precompute 
         T        = anneal['T'] 
-        T_rho    = np.maximum(T, self.rho_temp_bound)
+        T_rho    = np.maximum(T, self.rho_T_bound)
         rho      = 1./(1.-1./T_rho)
+        rho      = np.maximum(np.minimum(rho, self.rho_ubound), self.rho_lbound)
         beta     = 1./T
         pre1     = -1./2./sigma/sigma
         pil_bar  = np.log( pies/(1.-pies) )
-        Wl       = np.log(W)
-        Wrho     = np.exp(rho * Wl)
+        Wl       = accel.log(np.abs(W))
+        Wrho     = accel.exp(rho * Wl)
+        Wrhos    = np.sign(W) * Wrho
 
         # Allocate return structures
         F = np.empty( [my_N, 1+H+no_states] )
 
         # Iterate over all datapoints
+        tracing.tracepoint("E_step:iterating...")
         for n in xrange(my_N):
-            tracing.tracepoint("E_step:iterating")
             y    = my_y[n,:]
             cand = my_cand[n,:]
 
@@ -167,14 +185,19 @@ class MCA_ET(CAModel):
             F[n,1:H+1] = log_prod_joint
 
             # Handle hidden states with more than 1 active cause
-            log_prior = pil_bar * state_abs        # is (no_states,)
-            Wrho_ = Wrho[cand]                     # is (Hprime x D)
+            log_prior = pil_bar * state_abs             # is (no_states,)
+            Wrhos_ = Wrhos[cand]                        # is (Hprime, D)
 
-            Wbar = np.exp(np.log(np.dot(state_mtx, Wrho_))/rho)
+            t0 = np.dot(state_mtx, Wrhos_)
+            Wbar = np.sign(t0) * accel.exp(accel.log(np.abs(t0))/rho)
             log_prod_joint = log_prior + pre1 * ((Wbar-y)**2).sum(axis=1)
             F[n,1+H:] = log_prod_joint
 
+
         assert np.isfinite(F).all()
+
+        # Restore np.seterr
+        np.seterr(**old_seterr)
 
         return { 'logpj': F }
 
@@ -211,6 +234,8 @@ class MCA_ET(CAModel):
         state_abs = self.state_abs           # shape: (no_states,)
         no_states = len(state_abs)
 
+        # Disable some warnings
+        old_seterr = np.seterr(divide='ignore', under='ignore')
 
         # To compute et_loglike:
         my_ldenom_sum = 0.0
@@ -218,14 +243,15 @@ class MCA_ET(CAModel):
 
         # Precompute 
         T        = anneal['T'] 
-        T_rho    = np.maximum(T, self.rho_temp_bound)
+        T_rho    = np.maximum(T, self.rho_T_bound)
         rho      = 1./(1.-1./T_rho)
+        rho      = np.maximum(np.minimum(rho, self.rho_ubound), self.rho_lbound)
         beta     = 1./T
-        pre0     = (1.-rho)/rho
         pre1     = -1./2./sigma/sigma
         pil_bar  = np.log( pies/(1.-pies) )
-        Wl       = np.log(W)
-        Wrho     = np.exp(rho * Wl)
+        Wl       = accel.log(np.abs(W))
+        Wrho     = accel.exp(rho * Wl)
+        Wrhos    = np.sign(W) * Wrho
         Wsquared = W*W
 
         # Some asserts
@@ -234,35 +260,32 @@ class MCA_ET(CAModel):
         assert np.isfinite(Wrho).all()
         assert (Wrho > 1e-86).all()
 
-        my_corr  = beta*((my_logpj).max(axis=1))            # shape: (my_N,)
-        my_pjb   = np.exp(beta*my_logpj - my_corr[:, None]) # shape: (my_N, no_states)
+        my_corr   = beta*((my_logpj).max(axis=1))            # shape: (my_N,)
+        my_logpjb = beta*my_logpj - my_corr[:, None]         # shape: (my_N, no_states)
+        my_pj     = accel.exp(my_logpj)                         # shape: (my_N, no_states)
+        my_pjb    = accel.exp(my_logpjb)                        # shape: (my_N, no_states)
 
-        # Precompute factor for pi/gamma update
+        # Precompute factor for pi update and ET cutting
         A_pi_gamma = 0.; B_pi_gamma = 0.
         for gp in xrange(0, self.gamma+1):
-            a = comb(H, gp, exact=1) * pies**gp * (1.-pies)**(H-gp)
+            a = comb(H, gp) * pies**gp * (1.-pies)**(H-gp)
             A_pi_gamma += a
             B_pi_gamma += gp * a
 
         # Truncate data
         if anneal['Ncut_factor'] > 0.0:
             tracing.tracepoint("M_step:truncating")
-            my_denoms = np.log(my_pjb.sum(axis=1)) + my_corr
+            my_logdenoms = accel.log(my_pjb.sum(axis=1)) + my_corr
             N_use = int(N * (1 - (1 - A_pi_gamma) * anneal['Ncut_factor']))
 
-            cut_denom = parallel.allsort(my_denoms)[-N_use]
-            which     = np.array(my_denoms >= cut_denom)
-            
-            my_y     = my_y[which]
-            my_cand  = my_cand[which]
-            my_logpj = my_logpj[which]
-            my_pjb   = my_pjb[which]
-            my_corr  = my_corr[which]
-            my_N, D  = my_y.shape
-            N_use    = comm.allreduce(my_N)
+            cut_denom = parallel.allsort(my_logdenoms)[-N_use]
+            my_sel,   = np.where(my_logdenoms >= cut_denom)
+            my_N,     = my_sel.shape
+            N_use     = comm.allreduce(my_N)
         else:
-            N_use = N
-        dlog.append('N_use', N_use)
+            my_N,_ = my_y.shape
+            my_sel = np.arange(my_N)
+            N_use  = N
             
         # Allocate suff-stat arrays
         my_Wp    = np.zeros_like(W)  # shape (H, D)
@@ -271,13 +294,15 @@ class MCA_ET(CAModel):
         my_sigma = 0.0               #
 
         # Iterate over all datapoints
-        for n in xrange(my_N):
-            tracing.tracepoint("M_step:iterating")
-            y     = my_y[n,:]             # shape (D,)
-            cand  = my_cand[n,:]          # shape (Hprime,)
-            logpj = my_logpj[n,:]         # shape (no_states,)
-            pjb   = my_pjb[n,:]           # shape (no_states,)
-            corr  = my_corr[n]            # scalar
+        tracing.tracepoint("M_step:iterating...")
+        dlog.append('N_use', N_use)
+        for n in my_sel:
+            y      = my_y[n,:]             # shape (D,)
+            cand   = my_cand[n,:]          # shape (Hprime,)
+            logpj  = my_logpj[n,:]         # shape (no_states,)
+            logpjb = my_logpjb[n,:]        # shape (no_states,)
+            pj     = my_pj[n,:]            # shape (no_states,)
+            pjb    = my_pjb[n,:]           # shape (no_states,)
 
             this_Wp = np.zeros_like(W)    # numerator for W (current datapoint)   (H, D)
             this_Wq = np.zeros_like(W)    # denominator for W (current datapoint) (H, D)
@@ -291,27 +316,36 @@ class MCA_ET(CAModel):
             this_sigma += pjb[0] * (y**2).sum()
 
             # One active hidden cause
-            this_Wp    += (pjb[1:(H+1),None] * Wsquared[:,:]) * y[None, :]
-            this_Wq    += (pjb[1:(H+1),None] * Wsquared[:,:])
-            this_pi    += pjb[1:(H+1)].sum()
+            this_Wp    += (pjb[1:(H+1),None]) * y[None, :]
+            this_Wq    += (pjb[1:(H+1),None])
+            this_pi    +=  pjb[1:(H+1)].sum()
             this_sigma += (pjb[1:(H+1)] * ((W-y)**2).sum(axis=1)).sum()
 
             # Handle hidden states with more than 1 active cause
-            W_    = W[cand]                                    # is (Hprime, D)
-            Wl_   = Wl[cand]                                   # is (   "    ")
-            Wrho_ = Wrho[cand]                                 # is (   "    ")
+            W_     = W[cand]                                    # is (Hprime, D)
+            Wl_    = Wl[cand]                                   # is (   "    ")
+            Wrho_  = Wrho[cand]                                 # is (   "    ")
+            Wrhos_ = Wrhos[cand]                                # is (   "    ")
 
-            Wlrhom1 = (rho-1)*Wl_                              # is (Hprime, D)
-            Wlbar   = np.log(np.dot(state_mtx,Wrho_)) / rho    # is (no_states, D)
-            Wbar    = np.exp(Wlbar)                            # is (no_states, D)
-            blpj    = beta*logpj[1+H:] - corr                  # is (no_states,)
+            #Wbar   = calc_Wbar(state_mtx, W_)
+            #Wlbar  = np.log(np.abs(Wbar))
 
-            Aid  = (state_mtx[:,:, None] * np.exp(blpj[:,None,None] + (1-rho)*Wlbar[:, None, :] + Wlrhom1[None, :, :])).sum(axis=0)
+            t0 = np.dot(state_mtx, Wrhos_)
+            Wlbar   = accel.log(np.abs(t0)) / rho    # is (no_states, D)
+            #Wlbar   = np.maximum(Wlbar, -9.21)
+            Wbar    = np.sign(t0)*accel.exp(Wlbar)   # is (no_states, D)
 
-            assert np.isfinite(Wlbar).all()
-            assert np.isfinite(Wbar).all()
-            assert np.isfinite(pjb).all()
-            assert np.isfinite(Aid).all()
+            t = Wlbar[:, None, :]-Wl_[None, :, :]
+            t = np.maximum(t, 0.)
+            Aid = state_mtx[:,:, None] * accel.exp(logpjb[H+1:,None,None] - (rho-1)*t)
+            Aid = Aid.sum(axis=0)
+
+            #Aid = calc_Aid(logpjb[H+1:], W_, Wl_, state_mtx, Wbar, Wlbar, rho)
+
+            #assert np.isfinite(Wlbar).all()
+            #assert np.isfinite(Wbar).all()
+            #assert np.isfinite(pjb).all()
+            #assert np.isfinite(Aid).all()
 
             this_Wp[cand] += Aid * y[None, :]                     
             this_Wq[cand] += Aid
@@ -324,8 +358,13 @@ class MCA_ET(CAModel):
             my_pi    += this_pi / denom
             my_sigma += this_sigma / denom
 
-            my_ldenom_sum += np.log(np.sum(np.exp(logpj))) #For loglike computation
+            #self.tbl.append("logpj", logpj)
+            #self.tbl.append("corr", my_corr[n])
+            #self.tbl.append("denom", denom)
+            #self.tbl.append("cand", cand)
+            #self.tbl.append("Aid", Aid)
 
+            my_ldenom_sum += accel.log(np.sum(accel.exp(logpj))) #For loglike computation
 
         # Calculate updated W
         if 'W' in self.to_learn:
@@ -340,12 +379,19 @@ class MCA_ET(CAModel):
             comm.Allreduce( [my_Wp, MPI.DOUBLE], [Wp, MPI.DOUBLE] )
             comm.Allreduce( [my_Wq, MPI.DOUBLE], [Wq, MPI.DOUBLE] )
 
+
             # Make sure wo do not devide by zero
-            tiny = np.finfo(Wq.dtype).tiny
-            Wp[Wq < tiny] = 0.
+            tiny = self.tol
             Wq[Wq < tiny] = tiny
 
-            W_new = (Wp / Wq).T
+            # Calculate updated W
+            W_new = Wp / Wq
+
+            # Add inertia depending on Wq
+            alpha = 2.5
+            inertia = np.maximum(1. - accel.exp(-Wq / alpha), 0.2)
+            W_new = inertia*W_new + (1-inertia)*W
+            W_new = W_new.T
         else:
             W_new = W.T
 
@@ -367,23 +413,15 @@ class MCA_ET(CAModel):
         else:
             sigma_new = sigma
 
-        #Put all together and compute (always) et_approx_likelihood
+        # Put all together and compute (always) et_approx_likelihood
         ldenom_sum = comm.allreduce(my_ldenom_sum)
         lAi = (H * np.log(1. - pi_new)) - ((D/2) * np.log(2*pi)) -( D * np.log(sigma_new))
 
-        #For practical and et approx reasons we use: sum of restected respons=1
+        # For practical and et approx reasons we use: sum of restected respons=1
         loglike_et = (lAi * N_use) + ldenom_sum
 
+        # Restore np.seterr
+        np.seterr(**old_seterr)
+
         return { 'W': W_new, 'pi': pi_new, 'sigma': sigma_new , 'Q':loglike_et}
-
-
-    def calculate_respons(self, anneal, model_params, data):
-        data['candidates'].sort(axis=1) #(we do this to set the order back=outside)
-        F_JB = self.E_step(anneal, model_params, data)['logpj']
-        #Transform into responsabilities
-        corr = np.max(F_JB, axis=1)       
-        exp_F_JB_corr = np.exp(F_JB - corr[:, None])
-        respons = exp_F_JB_corr/(np.sum(exp_F_JB_corr, axis=1).reshape(-1, 1))
-        return respons
-
 
