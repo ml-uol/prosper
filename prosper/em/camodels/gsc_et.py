@@ -25,7 +25,7 @@ import prosper.utils.tracing as tracing
 from prosper.utils.datalog import dlog
 from prosper.em.camodels import CAModel
 from scipy import stats
-from tables import openFile
+from tables import open_file
 
 
 class GSC(CAModel):
@@ -116,7 +116,7 @@ class GSC(CAModel):
         """
         comm = self.comm
         
-        h5 = openFile(h5_output, 'r')
+        h5 = open_file(h5_output, 'r')
         # General information
         steps, H, D = h5.root.W_T.shape
 
