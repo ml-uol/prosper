@@ -25,7 +25,7 @@ model = BSC_ET(D, H, Hprime, gamma)
 # Ground truth parameters. Only used to generate training data.
 params_gt = {
     'W'     :  10*generate_bars_dict(H),
-    'pi'    :  2.0 / size,
+    'pi'    :  .0 / size,
     'sigma' :  2.0
 }
 
