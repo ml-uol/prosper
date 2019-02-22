@@ -7,6 +7,7 @@
 """
 
 from abc import ABCMeta, abstractmethod
+import six
 
 from os.path import isfile
 from multiprocessing import Process, Queue
@@ -23,8 +24,9 @@ comm = MPI.COMM_WORLD
 #=============================================================================
 # DataHandler (AbstractBaseClass)
 
-
-class DataHandler(object, metaclass=ABCMeta):
+@six.add_metaclass(ABCMeta)
+class DataHandler(object):
+#class DataHandler(object, metaclass=ABCMeta):
     """ Base class for handler which can be set to handle incoming data by DataLog."""
 
     def __init__(self):

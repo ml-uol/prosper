@@ -7,6 +7,7 @@ from mpi4py import MPI
 
 from itertools import combinations
 from abc import ABCMeta, abstractmethod
+import six
 
 import prosper.utils.tracing as tracing
 import prosper.utils.parallel as parallel
@@ -16,8 +17,8 @@ from prosper.em import Model
 
 #=============================================================================#
 # Abstract base class for component analysis models
-
-class CAModel(Model, metaclass=ABCMeta):
+six.add_metaclass(ABCMeta)
+class CAModel(Model):
     """ Abstract base class for Sparse Coding models with binary latent variables
         and expectation tuncation (ET) based training scheme.
     

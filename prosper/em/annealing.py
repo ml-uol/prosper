@@ -5,13 +5,15 @@
 
 
 from abc import ABCMeta, abstractmethod
+import six
 
 import numpy as np
 import time
 
 from prosper.utils.datalog import dlog
 
-class Annealing(metaclass=ABCMeta):
+six.add_metaclass
+class Annealing():
     """ Base class for implementations of annealing schemes.
 
     Implementations deriving from this class control the cooling schedule 
