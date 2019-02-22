@@ -14,7 +14,7 @@ H=2*size     # number of latents
 D=size**2    # dimensionality of observed data
 
 # Approximation parameters for Expectation Truncation
-Hprime = 7
+Hprime = 8
 gamma = 5
  
 # Import and instantiate a model
