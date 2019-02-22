@@ -1,4 +1,4 @@
-from prosper.utils.barstest import generate_bars
+from prosper.utils.barstest import generate_bars_dict
 import numpy as np
 
 # Filename for training data and ground truth parameters
@@ -28,7 +28,7 @@ model = MoP(D, H, A = A)
 # ground-truth data. This will NOT be used for the learning
 # process.
 params_gt = {
-    'W'     :  10*generate_bars(H),   # this function is in bars-create-data
+    'W'     :  10*generate_bars_dict(H),   # this function is in bars-create-data
     'pies'    : 1./H * np.ones(H)   # must sum to 1 for a mixture model
 }
 
