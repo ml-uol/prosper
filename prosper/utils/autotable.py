@@ -59,7 +59,7 @@ class AutoTable:
         self.warnings = True
         if fname is None:
             fname = self._guess_fname()
-        self.h5 = tables.openFile(fname, "w")
+        self.h5 = tables.open_file(fname, "w")
         self.compression_level = compression_level
         self.tables = {}
         self.types = {}
@@ -266,7 +266,7 @@ class AutoTable:
             filters = tables.Filters(complevel=self.compression_level,
                                      complib='zlib',
                                      shuffle=True)
-            self.tables[name] = h5.createEArray(h5.root, name, h5type, h5dim,
+            self.tables[name] = h5.create_earray(h5.root, name, h5type, h5dim,
                                                 filters=filters)
         elif type(example) == str:
             h5 = self.h5
@@ -312,7 +312,7 @@ class AutoTable:
             filters = tables.Filters(complevel=self.compression_level,
                                      complib='zlib',
                                      shuffle=True)
-            self.tables[name] = h5.createEArray(h5.root, name, h5type, h5dim,
+            self.tables[name] = h5.create_earray(h5.root, name, h5type, h5dim,
                                                 filters=filters)
         elif type(example) == list and type(example[0]) == str:
             h5 = self.h5
