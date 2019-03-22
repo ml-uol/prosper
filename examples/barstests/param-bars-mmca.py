@@ -15,7 +15,7 @@ H=2*size     # number of latents
 D=size**2    # dimensionality of observed data
 
 # Approximation parameters for Expectation Truncation
-Hprime = 8
+Hprime = 7
 gamma = 5
  
 # Import and instantiate a model
@@ -26,7 +26,13 @@ model = MMCA_ET(D, H, Hprime, gamma)
 # Ground truth parameters. Only used to generate training data.
 params_gt = {
     'W'     :  10*generate_bars_dict(H),
-    'pi'    :  2.0 / size,
+    'pi'    :  1.0 / size,
     'sigma' :  2.0
 }
 
+# Choose annealing schedule
+from prosper.em.annealing import LinearAnnealing
+anneal = LinearAnnealing(300)
+anneal['T'] = [(0, 4.), (.8, 1.)]
+anneal['Ncut_factor'] = [(0,0.),(2./3,1.)]
+anneal['anneal_prior'] = False
