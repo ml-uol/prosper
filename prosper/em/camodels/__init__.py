@@ -5,6 +5,8 @@
 import numpy as np
 from mpi4py import MPI
 
+from scipy.misc import logsumexp
+
 from itertools import combinations
 from abc import ABCMeta, abstractmethod
 import six
@@ -14,6 +16,36 @@ import prosper.utils.parallel as parallel
 
 from prosper.utils.datalog import dlog
 from prosper.em import Model
+
+
+def generate_state_matrix(Hprime, gamma):
+    """Full combinatorics of Hprime-dim binary vectors with at most gamma ones.
+
+    :param Hprime: Vector length
+    :type Hprime: int
+    :param gamma: Maximum number of ones
+    :param gamma: int
+
+    """
+    sl = []
+    for g in range(2,gamma+1):
+        for s in combinations(list(range(Hprime)), g):
+            sl.append( np.array(s, dtype=np.int8) )
+    state_list = sl
+
+    no_states = len(sl)
+    no_states = no_states
+
+    sm = np.zeros((no_states, Hprime), dtype=np.uint8)
+    for i in range(no_states):
+        s = sl[i]
+        sm[i, s] = 1
+    state_matrix = sm
+    state_abs = sm.sum(axis=1)
+    #print("state matrix updated")
+
+    return state_list, no_states, state_matrix, state_abs
+
 
 #=============================================================================#
 # Abstract base class for component analysis models
@@ -69,22 +101,7 @@ class CAModel(Model):
         }
 
         # Generate state-space list
-        sl = []
-        for g in range(2,gamma+1):
-            for s in combinations(list(range(Hprime)), g):
-                sl.append( np.array(s, dtype=np.int8) )
-        self.state_list = sl
-
-        no_states = len(sl)
-        self.no_states = no_states
-        
-        # Generate state-matrix
-        sm = np.zeros((no_states, Hprime), dtype=np.uint8)
-        for i in range(no_states):
-            s = sl[i]
-            sm[i, s] = 1
-        self.state_matrix = sm
-        self.state_abs = sm.sum(axis=1)
+        self.state_list, self.no_states, self.state_matrix, self.state_abs = generate_state_matrix(Hprime, gamma)
         
     def generate_data(self, model_params, my_N):
         """ 
@@ -219,119 +236,126 @@ class CAModel(Model):
 
         return model_params
 
-    def inference(self, anneal, model_params, candidates, test_data, topK=10, logprob=False):
+
+    def compute_lpj(self, anneal, model_params, my_data):
+        """Determine candidates and compute log-pseudo-joint.
+
+        :param anneal: Annealing schedule, e.g., em.anneal 
+        :type  anneal: prosper.em.annealling.Annealing
+        :param model_params: Learned model parameters, e.g., em.lparams 
+        :type  model_params: dict        
+        :param my_data: Data stored in field 'y'.
+        :type  my_data: dict
+        """
+
+        assert 'y' in my_data, "Key 'y' in my_data dict not defined."        
+        my_data = self.select_Hprimes(model_params, my_data)
+
+        my_suff_stat = self.E_step(anneal, model_params, my_data)
+        return my_suff_stat['logpj'], my_data['candidates']
+
+
+    def inference(self, anneal, model_params, test_data, topK=10, logprob=False, adaptive=True):
         """
         Perform inference with the learned model on test data and return the top K configurations with their posterior probabilities. 
         :param anneal: Annealing schedule, e.g., em.anneal 
         :type  anneal: prosper.em.annealling.Annealing
         :param model_params: Learned model parameters, e.g., em.lparams 
-        :type  model_params: dict
-        :param candidates: The list of candidate binary configurations, e.g., my_data['candidates'] 
-        :type  candidates: numpy.ndarray
-        :param test_data: The test data 
-        :type  test_data: numpy.ndarray
+        :type  model_params: dict        
+        :param test_data: The test data stored in field 'y'. Candidates stored in 'candidates' (optional).
+        :type  test_data: dict
         :param topK: The number of returned configurations 
         :type  topK: int
         :param logprob: Return probability or log probability
         :type  logprob: boolean
+        :param adaptive: Adjust Hprime, gamma to be greater than the number of active units in the MAP state
+        :type adaptive: boolean
         """
 
-        W = model_params['W']
-        my_y = test_data
-        H = self.H
+        assert 'y' in test_data, "Key 'y' in test_data dict not defined."
+        
+        model_params = self.check_params(model_params)
+
+        my_y = test_data['y']
         my_N, D = my_y.shape
+        H = self.H
 
         # Prepare return structure
+        if topK==-1:
+            topK=self.state_matrix.shape[0]
         res = {
-            's': np.zeros( (my_N, topK, H), dtype=np.int),
-            'p': np.zeros( (my_N, topK) )
+            's': np.zeros( (my_N, topK, H), dtype=np.int8),
+            'm': np.zeros( (my_N, H) ),
+            'p': np.zeros( (my_N, topK) ),
+            'gamma': np.zeros( (my_N,) ),
+            'Hprime': np.zeros( (my_N,) )
         }
 
-        my_cand = candidates
-        my_data = {
-        'y': test_data,
-        'candidates':my_cand
-        }
+        test_data_tmp = {'y' : my_y}
+        which = np.ones(my_N,dtype=bool)
 
-        my_suff_stat = self.E_step(anneal, model_params, my_data)
-        my_logpj  = my_suff_stat['logpj']
-        my_corr   = my_logpj.max(axis=1)           # shape: (my_N,)
-        my_logpjc = my_logpj - my_corr[:, None]    # shape: (my_N, no_states)
-        my_pjc    = np.exp(my_logpjc)              # shape: (my_N, no_states)
-        my_denomc = my_pjc.sum(axis=1)             # shape: (my_N)
-        my_pjc = my_pjc/my_denomc[:,None]
-        my_logpjc += -np.log(my_denomc)[:,None]
-        
-        idx = np.argsort(my_logpjc, axis=-1)[:, -1:-(topK+1):-1]
-        for n in range(my_N):                                   # XXX Vectorize XXX
-            for m in range(topK):
-                this_idx = idx[n,m]
-                if logprob:
-                    res['p'][n,m] = my_logpjc[n, this_idx] 
-                else:
-                    res['p'][n,m] = my_pjc[n, this_idx] 
-                if this_idx == 0:
-                    pass
-                elif this_idx < (H+1):
-                    res['s'][n,m,this_idx-1] = 1
-                else:
-                    s_prime = self.state_matrix[this_idx-H-1]
-                    res['s'][n,m,my_cand[n,:]] = s_prime
+        while which.any():
+
+            ind_n = np.where(which)[0]            
+
+            my_logpj, my_cand = self.compute_lpj(anneal, model_params, test_data_tmp)
+            my_corr   = my_logpj.max(axis=1)           # shape: (my_N,)
+            my_logpjc = my_logpj - my_corr[:, None]    # shape: (my_N, no_states)
+            my_pjc    = np.exp(my_logpjc)              # shape: (my_N, no_states)
+            my_denomc = my_pjc.sum(axis=1)             # shape: (my_N)
+            my_logpjc += -np.log(my_denomc)[:,None]            
+            idx = np.argsort(my_logpjc, axis=-1)[:, ::-1]
+
+            for n in range(my_N):                                   # XXX Vectorize XXX
+                n_ = ind_n[n]
+                res['Hprime'][n_] = self.Hprime
+                res['gamma'][n_] = self.gamma                
+                for m in range(topK):                    
+                    this_idx = idx[n,m]
+                    if logprob:
+                        res['p'][n_,m] = my_logpjc[n, this_idx] 
+                    else:
+                        res['p'][n_,m] = my_pjc[n, this_idx] 
+                    if this_idx == 0:
+                        pass
+                    elif this_idx < (H+1):
+                        res['s'][n_,m,this_idx-1] = 1
+                    else:
+                        s_prime = self.state_matrix[this_idx-H-1]                        
+                        res['s'][n_,m,my_cand[n,:]] = s_prime
+
+                for h in range(H):
+                    if h in my_cand[n,:]:
+                        idx_ = np.where(my_cand[n]==h)[0][0]
+                        logp = np.hstack([my_logpjc[n,h+1],my_logpjc[n,H+1:][self.state_matrix[:,idx_]==1]])
+                        res['m'][n_,h] = logsumexp(logp)
+                    else:
+                        res['m'][n_,h] = my_logpjc[n,h+1]
+
+            if not adaptive:
+                break
+
+            which = ((res['s'][:,0,:]!=0).sum(-1)==self.gamma) # shape: (my_N,)
+            if not which.any():
+                break
+            test_data_tmp['y']=my_y[which]
+            my_N=np.sum(which)            
+            print("For %i data points MAP state has activity equal to gamma." % my_N)
+
+            if self.Hprime == self.H:
+                pass
+            else:
+                self.Hprime+=1
+
+            if self.gamma == self.H:
+                continue
+            else:
+                self.gamma+=1
+
+            print("Updating state matrix and running again.")
+            self.state_list, self.no_states, self.state_matrix, self.state_abs = generate_state_matrix(self.Hprime, self.gamma)
+
+        if not logprob:
+            res['m'] = np.exp(res['m'])
 
         return res
-
-    def inference_marginal(self, anneal, model_params, candidates, test_data, logprob=False):
-        """
-        Perform inference with the learned model on test data and return the top K configurations with their posterior probabilities. 
-        :param anneal: Annealing schedule, e.g., em.anneal 
-        :type  anneal: prosper.em.annealling.Annealing
-        :param model_params: Learned model parameters, e.g., em.lparams 
-        :type  model_params: dict
-        :param candidates: The list of candidate binary configurations, e.g., my_data['candidates'] 
-        :type  candidates: numpy.ndarray
-        :param test_data: The test data 
-        :type  test_data: numpy.ndarray
-        :param topK: The number of returned configurations 
-        :type  topK: int
-        :param logprob: Return probability or log probability
-        :type  logprob: boolean
-        """
-
-        W = model_params['W']
-        my_y = test_data
-        H = self.H
-        my_N, D = my_y.shape
-
-        # Prepare return structure
-        logp_m = np.zeros((my_N, H))
-
-        my_cand = candidates
-        my_data = {
-        'y': test_data,
-        'candidates':my_cand
-        }
-
-        my_suff_stat = self.E_step(anneal, model_params, my_data)
-        my_logpj  = my_suff_stat['logpj']
-        my_corr   = my_logpj.max(axis=1)           # shape: (my_N,)
-        my_logpjc = my_logpj - my_corr[:, None]    # shape: (my_N, no_states)
-        my_pjc    = np.exp(my_logpjc)              # shape: (my_N, no_states)
-        my_denomc = my_pjc.sum(axis=1)             # shape: (my_N)
-        my_pjc = my_pjc/my_denomc[:,None]
-        my_logpjc += -np.log(my_denomc)[:,None]
-
-        from scipy.misc import logsumexp
-        
-        for n in range(my_N):
-            for h in range(H):
-                if h in my_cand[n,:]:
-                    idx = np.where(my_cand[n]==h)[0][0]
-                    logp = np.hstack([my_logpjc[n,h+1],my_logpjc[n,H+1:][self.state_matrix[:,idx]==1]])
-                    logp_m[n,h] = logsumexp(logp)
-                else:
-                    logp_m[n,h] = my_logpjc[n,h+1]
-
-        if logprob:
-            return logp_m
-        else:
-            return np.exp(logp_m)
