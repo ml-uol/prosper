@@ -20,6 +20,9 @@ from prosper.utils.datalog import dlog, StoreToH5, TextPrinter, StoreToTxt
 from prosper.em import EM
 from prosper.em.annealing import LinearAnnealing
 
+from pdb import set_trace as BP
+
+
 # Main
 if __name__ == "__main__":
     import argparse
@@ -45,12 +48,13 @@ if __name__ == "__main__":
     D = params.get('D', size**2)         # observed dimensionality
     H = params.get('H', 2*size)          # latent dimensionality
     model = params['model']              # the actual generative model
+    model_str = model.__class__.__name__
 
     # Ground truth parameters -- only used for generation
     params_gt = params.get('params_gt')  # Ground truth param 
 
     # Create output path
-    output_path = create_output_path()
+    output_path = create_output_path('learning-and-inference-' + param_fname)
 
     # Disgnostic output
     pprint("="*40)
@@ -71,9 +75,14 @@ if __name__ == "__main__":
     my_test_data = model.generate_data(params_gt, N_test // comm.size)
 
     # Configure DataLogger
+    store_list = ('*')
     print_list = ('T', 'Q', 'pi', 'sigma', 'N', 'MAE')
-    dlog.set_handler(print_list, TextPrinter)
+    dlog.set_handler(print_list, TextPrinter)    
     dlog.set_handler(print_list, StoreToTxt, output_path +'/terminal.txt')
+    dlog.set_handler(store_list, StoreToH5, output_path +'/result.h5')
+
+    dlog.append('Hprime_start', model.Hprime)
+    dlog.append('gamma_start', model.gamma)
 
     model_params = model.standard_init(my_data)
     
@@ -90,11 +99,42 @@ if __name__ == "__main__":
     em = EM(model=model, anneal=anneal)
     em.data = my_data
     em.lparams = model_params
-    em.lparams = params_gt
+    # em.lparams = params_gt
     em.run()
-    pprint(" Infering Bars from the test set")
-    res=model.inference(anneal,em.lparams,my_test_data,no_maps=-1)
+    
+    pprint(" Infering Bars from the test set")    
+    prms = {'topK' : 5, 'adaptive' : True}
+    params_for_inference = em.lparams
+    res=model.inference(anneal,params_for_inference,my_test_data,**prms)
+
+    # Store results
+    N_test_store = 30
+    dlog.append('test_data', my_test_data['y'][:N_test_store,:])
+    for n in range(N_test_store):        
+        if model_str == 'GSC':
+            tmp = params_gt['W'] * my_test_data['z'][n,:][None,:]        
+        elif model_str == 'Ternary_ET':
+            tmp = params_gt['W'] * my_test_data['s'][n,:][None,:].astype(float)
+        else:
+            tmp = params_gt['W']
+        key = 'test_n%i_comps_gt' % n
+        if my_test_data['s'][n,:].astype(bool).sum() > 0:
+            dlog.append(key, tmp[:,my_test_data['s'][n,:].astype(bool)])
+        else:
+            dlog.append(key, 0)
+        dlog.append('test_n%i_p_top%i' % (n,prms['topK']), res['p'][n,:prms['topK']])
+        dlog.append('test_n%i_Hprime' % n, res['Hprime'][n])
+        dlog.append('test_n%i_gamma' % n, res['gamma'][n])        
+        for k in range(prms['topK']):
+            key = 'test_n%i_comps_top%i' % (n,k)
+            if res['s'][n,k,:].astype(bool).sum() > 0:
+                if model_str == 'Ternary_ET':
+                    tmp = params_for_inference['W'] * res['s'][n,k,:][None,:].astype(float)
+                else:
+                    tmp = params_for_inference['W']
+                dlog.append(key, tmp[:,res['s'][n,k,:].astype(bool)])
+            else:
+                dlog.append(key, 0)
 
     dlog.close(True)
-    pprint("Done")
-
+    pprint("Done")    
