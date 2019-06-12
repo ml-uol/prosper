@@ -3,8 +3,6 @@
 #  Lincense: Academic Free License (AFL) v3.0
 #
 
-
-
 import sys
 sys.path.insert(0, '../..')
 
@@ -20,10 +18,7 @@ from prosper.utils.datalog import dlog, StoreToH5, TextPrinter, StoreToTxt
 from prosper.em import EM
 from prosper.em.annealing import LinearAnnealing
 
-from pdb import set_trace as BP
 
-
-# Main
 if __name__ == "__main__":
     import argparse
 
@@ -109,10 +104,11 @@ if __name__ == "__main__":
 
     # Store results
     N_test_store = 30
+    N_test_store = np.min([N_test_store, my_test_data['y'].shape[0]])
     dlog.append('test_data', my_test_data['y'][:N_test_store,:])
-    for n in range(N_test_store):        
+    for n in range(N_test_store):
         if model_str == 'GSC':
-            tmp = params_gt['W'] * my_test_data['z'][n,:][None,:]        
+            tmp = params_gt['W'] * my_test_data['z'][n,:][None,:]
         elif model_str == 'Ternary_ET':
             tmp = params_gt['W'] * my_test_data['s'][n,:][None,:].astype(float)
         else:
