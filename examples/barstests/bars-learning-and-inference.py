@@ -93,13 +93,13 @@ if __name__ == "__main__":
     # Create and start EM annealing
     em = EM(model=model, anneal=anneal)
     em.data = my_data
-    em.lparams = model_params
-    # em.lparams = params_gt
+    em.lparams = model_params    
     em.run()
     
     pprint(" Infering Bars from the test set")    
-    prms = {'topK' : 5, 'adaptive' : True}
+    prms = {'topK' : 5, 'adaptive' : True, 'Hprime_max' : model.Hprime+3, 'gamma_max' : model.gamma+3}
     params_for_inference = em.lparams
+    # params_for_inference = params_gt
     res=model.inference(anneal,params_for_inference,my_test_data,**prms)
 
     # Store results
