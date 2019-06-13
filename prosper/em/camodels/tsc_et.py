@@ -378,7 +378,8 @@ class Ternary_ET(CAModel):
 
 
     @tracing.traced
-    def inference(self, anneal, model_params, test_data, topK=10, logprob=False, adaptive=True, abs_marginal=True):
+    def inference(self, anneal, model_params, test_data, topK=10, logprob=False, abs_marginal=True,
+        adaptive=True, Hprime_max=None, gamma_max=None):
         """
         Perform inference with the learned model on test data and return the top K configurations with their posterior probabilities. 
         :param anneal: Annealing schedule, e.g., em.anneal 
@@ -390,15 +391,20 @@ class Ternary_ET(CAModel):
         :param topK: The number of returned configurations 
         :type  topK: int
         :param logprob: Return probability or log probability
-        :type  logprob: boolean
-        :param adaptive: Adjust Hprime, gamma to be greater than the number of active units in the MAP state
-        :type adaptive: boolean
+        :type  logprob: boolean        
         :param abs_marginal: Return marginal of states at absolut value
         :type abs_marginal: boolean
+        :param adaptive: Adjust Hprime, gamma to be greater than the number of active units in the MAP state
+        :type adaptive: boolean
+        :param Hprime_max: Upper limit for Hprime adjustment 
+        :type Hprime_max: int
+        :param gamma_max: Upper limit for gamma adjustment 
+        :type gamma_max: int
         """
 
         assert 'y' in test_data, "Key 'y' in test_data dict not defined."
         
+        comm = self.comm
         my_y = test_data['y']        
         my_N, D = my_y.shape
         H = self.H
@@ -453,26 +459,31 @@ class Ternary_ET(CAModel):
             which = ((res['s'][:,0,:].astype(bool)!=0).sum(-1)==self.gamma) # shape: (my_N,)
             if not which.any():
                 break
+            else:
+                if (Hprime_max is not None and self.Hprime == Hprime_max) and (gamma_max is not None and self.gamma == gamma_max):
+                    break
             test_data_tmp['y']=my_y[which]
-            my_N=np.sum(which)            
-            print("For %i data points MAP state has activity equal to gamma." % my_N)
+            my_N=np.sum(which)                        
+            print("Rank %i: For %i data points MAP state has activity equal to gamma." % (comm.rank, my_N))
             del test_data_tmp['candidates']            
 
-            if self.Hprime == self.H:
+            if (self.Hprime == self.H) or (Hprime_max is not None and self.Hprime == Hprime_max):
                 pass
             else:
                 self.Hprime+=1
 
-            if self.gamma == self.H:
+            if (self.gamma == self.H) or (gamma_max is not None and self.gamma == gamma_max):
                 continue
             else:
                 self.gamma+=1
-
-            print("Updating state matrix and running again.")
+            
+            print("Rank %i: Updating state matrix and running again." % comm.rank)
             self.fullSM, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(self.Hprime, self.gamma, self.H, self.states)
 
         if logprob:
             res['m'] = np.log(res['m'])
             res['am'] = np.log(res['am'])
+
+        comm.Barrier()
 
         return res

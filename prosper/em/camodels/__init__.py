@@ -255,9 +255,11 @@ class CAModel(Model):
         return my_suff_stat['logpj'], my_data['candidates']
 
 
-    def inference(self, anneal, model_params, test_data, topK=10, logprob=False, adaptive=True):
+    def inference(self, anneal, model_params, test_data, topK=10, logprob=False, adaptive=True,
+        Hprime_max=None, gamma_max=None):
         """
-        Perform inference with the learned model on test data and return the top K configurations with their posterior probabilities. 
+        Perform inference with the learned model on test data and return the top K configurations with their
+        posterior probabilities. 
         :param anneal: Annealing schedule, e.g., em.anneal 
         :type  anneal: prosper.em.annealling.Annealing
         :param model_params: Learned model parameters, e.g., em.lparams 
@@ -270,12 +272,17 @@ class CAModel(Model):
         :type  logprob: boolean
         :param adaptive: Adjust Hprime, gamma to be greater than the number of active units in the MAP state
         :type adaptive: boolean
+        :param Hprime_max: Upper limit for Hprime adjustment 
+        :type Hprime_max: int
+        :param gamma_max: Upper limit for gamma adjustment 
+        :type gamma_max: int
         """
 
         assert 'y' in test_data, "Key 'y' in test_data dict not defined."
         
         model_params = self.check_params(model_params)
 
+        comm = self.comm
         my_y = test_data['y']
         my_N, D = my_y.shape
         H = self.H
@@ -338,24 +345,29 @@ class CAModel(Model):
             which = ((res['s'][:,0,:]!=0).sum(-1)==self.gamma) # shape: (my_N,)
             if not which.any():
                 break
+            else:
+                if (Hprime_max is not None and self.Hprime == Hprime_max) and (gamma_max is not None and self.gamma == gamma_max):
+                    break
             test_data_tmp['y']=my_y[which]
             my_N=np.sum(which)            
-            print("For %i data points MAP state has activity equal to gamma." % my_N)
+            print("Rank %i: For %i data points MAP state has activity equal to gamma." % (comm.rank, my_N))
 
-            if self.Hprime == self.H:
+            if (self.Hprime == self.H) or (Hprime_max is not None and self.Hprime == Hprime_max):
                 pass
             else:
                 self.Hprime+=1
 
-            if self.gamma == self.H:
+            if (self.gamma == self.H) or (gamma_max is not None and self.gamma == gamma_max):
                 continue
             else:
                 self.gamma+=1
 
-            print("Updating state matrix and running again.")
+            print("Rank %i: Updating state matrix and running again." % comm.rank)
             self.state_list, self.no_states, self.state_matrix, self.state_abs = generate_state_matrix(self.Hprime, self.gamma)
 
         if not logprob:
             res['m'] = np.exp(res['m'])
+
+        comm.Barrier()
 
         return res
