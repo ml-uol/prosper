@@ -720,14 +720,10 @@ class GSC(CAModel):
     @tracing.traced
     def select_Hprimes(self, model_params, my_data):
 
-        comm = self.comm
-
         my_y = my_data['y']
         comp_scores = np.zeros((my_y.shape[0], self.H))
         
         my_N, D = my_y.shape
-        N = comm.allreduce(my_N) 
-        
         
         comp_scores = self.component_scores(model_params, my_data)
         cand_comps = np.argsort(comp_scores, axis = 1)[:,-self.Hprime:]
@@ -753,14 +749,12 @@ class GSC(CAModel):
 
     @tracing.traced
     def component_scores(self, model_params, my_data):
-        comm = self.comm
 
         my_y = my_data['y']
 
         comp_fac_probs = np.zeros((my_y.shape[0], self.H))
         
         my_N, D = my_y.shape
-        N = comm.allreduce(my_N) 
 
         log_tiny = np.finfo(np.float64).min
 
