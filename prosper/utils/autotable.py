@@ -273,7 +273,7 @@ class AutoTable:
             filters = tables.Filters(complevel=self.compression_level,
                                      complib='zlib',
                                      shuffle=True)
-            self.tables[name] = h5.createVLArray(h5.root, name, h5type,
+            self.tables[name] = h5.create_vlarray(h5.root, name, h5type,
                                                  filters=filters)
         self.types[name] = type(example)
 
@@ -319,7 +319,7 @@ class AutoTable:
             filters = tables.Filters(complevel=self.compression_level,
                                      complib='zlib',
                                      shuffle=True)
-            self.tables[name] = h5.createVLArray(h5.root, name, h5type,
+            self.tables[name] = h5.create_vlarray(h5.root, name, h5type,
                                                  filters=filters)
         self.types[name] = type(example)
 
