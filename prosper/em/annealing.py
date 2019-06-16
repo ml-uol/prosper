@@ -103,7 +103,7 @@ class LinearAnnealing(Annealing):
         left_pos, left_val = points[i-1]
         right_pos, right_val = points[i]
             
-        frac = (cur_pos-left_pos) / (right_pos-left_pos)
+        frac = float((cur_pos-left_pos)) / (right_pos-left_pos)
         return frac * (right_val-left_val) + left_val
 
     def __setitem__(self, param_name, points):
