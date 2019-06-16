@@ -1,7 +1,7 @@
 from prosper.utils.barstest import generate_bars_dict
 import numpy as np
 
-np.random.seed(1)
+#np.random.seed(1)
 
 # Number of datapoints to generate
 N = 10000
@@ -55,3 +55,10 @@ elif sigma_sq_type == 'diagonal':
 elif sigma_sq_type == 'full':
     params_gt['sigma_sq'] =  np.eye(D)
 
+
+# Choose annealing schedule
+from prosper.em.annealing import LinearAnnealing
+anneal = LinearAnnealing(150)
+anneal['T'] = [(0, 4.), (.8, 1.)]
+anneal['Ncut_factor'] = [(0,0.),(2./3,1.)]
+anneal['anneal_prior'] = False
