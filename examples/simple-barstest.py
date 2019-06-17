@@ -1,7 +1,4 @@
 #!/usr/bin/env python
-
-
-
 import sys
 sys.path.insert(0, '..')
 
@@ -9,7 +6,6 @@ import numpy as np
 from mpi4py import MPI
 
 from prosper.utils import create_output_path 
-from prosper.utils.autotable import AutoTable
 from prosper.utils.parallel import pprint, stride_data
 from prosper.utils.barstest import generate_bars_dict
 
@@ -75,6 +71,6 @@ em.data = my_data
 em.lparams = model_params
 em.run()
 
-dlog.close(True)
+dlog.close()
 pprint("Done")
 
