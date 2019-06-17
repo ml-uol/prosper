@@ -720,14 +720,10 @@ class GSC(CAModel):
     @tracing.traced
     def select_Hprimes(self, model_params, my_data):
 
-        comm = self.comm
-
         my_y = my_data['y']
         comp_scores = np.zeros((my_y.shape[0], self.H))
         
         my_N, D = my_y.shape
-        N = comm.allreduce(my_N) 
-        
         
         comp_scores = self.component_scores(model_params, my_data)
         cand_comps = np.argsort(comp_scores, axis = 1)[:,-self.Hprime:]
@@ -740,12 +736,13 @@ class GSC(CAModel):
             if cluster_key in data_clusters:
                 data_cluster = data_clusters[cluster_key]
                 data_cluster['data'] = np.append(data_cluster['data'],my_y[ind].reshape((1,D)), axis=0)
+                data_cluster['ind'] += [ind,]
             else:
                 data_cluster = {}
                 data_cluster['hprimes'] = strd_cand_comps[ind,:]
                 data_cluster['data'] = my_y[ind].reshape((1,D))
+                data_cluster['ind'] = [ind,]
             data_clusters[cluster_key] = data_cluster
-
 
         my_data['data_clusters'] = data_clusters
 
@@ -753,14 +750,12 @@ class GSC(CAModel):
 
     @tracing.traced
     def component_scores(self, model_params, my_data):
-        comm = self.comm
 
         my_y = my_data['y']
 
         comp_fac_probs = np.zeros((my_y.shape[0], self.H))
         
         my_N, D = my_y.shape
-        N = comm.allreduce(my_N) 
 
         log_tiny = np.finfo(np.float64).min
 
@@ -813,6 +808,137 @@ class GSC(CAModel):
 
         return comp_fac_probs
 
+    def compute_lpj(self, anneal, model_params, my_data):
+        """Determine candidates and compute log-pseudo-joint.
 
-    
+        :param anneal: Annealing schedule, e.g., em.anneal 
+        :type  anneal: prosper.em.annealling.Annealing
+        :param model_params: Learned model parameters, e.g., em.lparams 
+        :type  model_params: dict        
+        :param my_data: Data stored in field 'y'. Candidates stored in 'candidates' (optional).
+        :type  my_data: dict
+        """
 
+        assert 'y' in my_data, "Key 'y' in test_data dict not defined."
+                
+        my_data = self.select_Hprimes(model_params, my_data)
+
+        data_clusters = my_data['data_clusters']
+
+        tiny = np.finfo(np.float64).tiny
+        sigma_sq_type = self.sigma_sq_type
+        my_N, D = my_data['y'].shape
+        H = self.H
+        
+        if sigma_sq_type == 'full':
+            sigma_sq_inv = np.linalg.inv(model_params['sigma_sq'])
+            B = sigma_sq_inv 
+        elif sigma_sq_type == 'diagonal':
+            sigma_sq_inv = 1./model_params['sigma_sq']
+            B = np.diag(sigma_sq_inv)
+        else:# 'scalar'
+            sigma_sq_inv = 1./model_params['sigma_sq']
+            B = sigma_sq_inv * np.eye(self.D)
+        model_params['sigma_sq_inv'] = sigma_sq_inv
+        model_params['B'] = B   
+        log_pi_pr = np.log(model_params['pi']) - np.log(1 - np.array(model_params['pi'])) 
+
+        my_y = np.zeros([my_N, D])
+        my_y_cands = np.zeros([my_N, self.Hprime],dtype=np.int)
+        my_inds = np.zeros([my_N,],dtype=np.int)
+        my_logpj = np.zeros([my_N, 1+H+self.no_states])
+
+        y_l_ind = 0
+        
+        for cluster_key in data_clusters.keys():
+            cur_cluster = data_clusters[cluster_key]
+            cur_comps = cur_cluster['hprimes']            
+            cur_W = np.array(model_params['W'][:,cur_comps])
+            cur_mu = np.array(model_params['mu'][cur_comps])
+            cur_psi_sq = (model_params['psi_sq'][cur_comps,:])[:,cur_comps]
+            cur_y = cur_cluster['data']            
+            y_inds = np.arange(y_l_ind,y_l_ind+cur_y.shape[0])
+            y_l_ind += cur_y.shape[0]
+
+            my_y[y_inds] = cur_y
+            my_y_cands[y_inds] = cur_comps[None,:]
+            my_inds[y_inds] = np.array(cur_cluster['ind'])            
+                        
+            cur_N, D = cur_y.shape
+
+            ################################## Calc prob of null state #########################################
+
+            my_logpj[y_inds,0] = - np.sum(np.array(self.dtype_precision(cur_y) * np.matrix(B)) * cur_y,1)
+
+            ############################# Loop through all the singleton states ################################
+
+            for cur_h in range(H):
+
+                W_s = np.matrix(model_params['W'][:,cur_h])                
+                mu_s = model_params['mu'][cur_h]
+                psi_sq_s = model_params['psi_sq'][cur_h,cur_h]
+
+                if sigma_sq_type == 'full' or sigma_sq_type == 'scalar':
+                    sigma_sq_inv_W_s = np.dot(W_s , sigma_sq_inv)
+                elif sigma_sq_type == 'diagonal':
+                    sigma_sq_inv_W_s = np.matrix(sigma_sq_inv * np.array(W_s))
+
+                lambda_s = np.dot(sigma_sq_inv_W_s, W_s.T) + 1/psi_sq_s 
+                lambda_s_inv = 1./lambda_s
+
+                if sigma_sq_type == 'full' or sigma_sq_type == 'scalar':
+                    lambda_s_inv_W_s = np.dot(lambda_s_inv * W_s, sigma_sq_inv)
+                elif sigma_sq_type == 'diagonal':
+                    lambda_s_inv_W_s = np.matrix(np.array(lambda_s_inv * W_s) * sigma_sq_inv)
+
+                C_inv = B - sigma_sq_inv_W_s.T * lambda_s_inv_W_s
+                C_det = np.log(psi_sq_s) + np.linalg.slogdet(lambda_s)[1]
+                norm_const = -C_det
+                cur_y_norm = np.array(cur_y- (mu_s * W_s))
+                prob_s = np.sum(log_pi_pr[cur_h])                
+                my_logpj[y_inds,cur_h+1] = (norm_const  - np.sum(np.array(cur_y_norm * np.matrix(C_inv)) * cur_y_norm,1)) + prob_s
+
+
+            ################### Now compute posterior over all the non-singleton states ########################                        
+
+            for state_ind in range(self.no_states):
+                cur_state = self.state_matrix[state_ind]
+                ind_comps = cur_state > 0
+                # active component indexes in the current H_prime dimensional state
+                actv_comps_inds = np.nonzero(ind_comps)[0]
+                # actual component indexes in H-dimensional hidden space
+                actual_comps_inds = cur_comps[actv_comps_inds]
+
+                num_act_comps = np.sum(ind_comps)
+                if num_act_comps == 0:
+                    continue
+
+                W_s = np.matrix(cur_W[:,actv_comps_inds])
+                psi_sq_s = (cur_psi_sq[actv_comps_inds,:])[:,actv_comps_inds]
+                mu_s = np.array(cur_mu[actv_comps_inds])
+
+                if sigma_sq_type == 'full' or sigma_sq_type == 'scalar':
+                    sigma_sq_inv_W_s = sigma_sq_inv * W_s
+                elif sigma_sq_type == 'diagonal':
+                    sigma_sq_inv_W_s = sigma_sq_inv[:,None] * np.array(W_s)
+
+                lambda_s = sigma_sq_inv_W_s.T * W_s + np.linalg.inv(psi_sq_s)
+                lambda_s_inv = np.linalg.inv(lambda_s)
+
+                if sigma_sq_type == 'full' or sigma_sq_type == 'scalar':
+                    lambda_s_inv_W_s = (lambda_s_inv * W_s.T) * sigma_sq_inv
+                elif sigma_sq_type == 'diagonal':
+                    lambda_s_inv_W_s = np.matrix(np.array(lambda_s_inv * W_s.T) * sigma_sq_inv[None,:])                             
+
+                # posterior probability of y_n given s and model params the current state (in log space)
+                C_inv = B - sigma_sq_inv_W_s * lambda_s_inv_W_s
+                C_det = np.linalg.slogdet(psi_sq_s)[1] + np.linalg.slogdet(lambda_s)[1]
+                norm_const = -C_det
+                cur_y_norm = np.array(cur_y - np.dot(W_s, mu_s))
+                prob_s = np.sum(log_pi_pr[actual_comps_inds])
+                my_logpj[y_inds,state_ind+H+1] = (norm_const  - np.sum(np.array(cur_y_norm * np.matrix(C_inv)) * cur_y_norm,1)) + prob_s
+
+
+        my_inds_sorted = np.argsort(my_inds)
+        assert (my_y[my_inds_sorted,:] == my_data['y']).all()
+        return my_logpj[my_inds_sorted,:], my_y_cands[my_inds_sorted,:] 

@@ -66,7 +66,7 @@ class TestBarstest(unittest.TestCase):
     def test_generate_bars_data(self):
         num = 100
         size = 5
-        p_bar = 1 / size
+        p_bar = 1. / size
 
         data = barstest.generate_bars_data(100, size, p_bar)
 

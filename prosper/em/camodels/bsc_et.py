@@ -337,7 +337,10 @@ class BSC_ET(CAModel):
             comm.Allreduce( [my_Wq, MPI.DOUBLE], [Wq, MPI.DOUBLE] )
             #W_new  = np.dot(np.linalg.inv(Wq), Wp)
             #W_new  = np.linalg.solve(Wq, Wp)      # TODO check and switch to this one
-            W_new  = np.linalg.lstsq(Wq, Wp)[0]    # TODO check and switch to this one
+            rcond = -1
+            if float(np.__version__[2:]) >= 14.0:
+                rcond = None
+            W_new  = np.linalg.lstsq(Wq, Wp, rcond=rcond)[0]    # TODO check and switch to this one
         else:
             W_new = W
 
