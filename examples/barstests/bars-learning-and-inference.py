@@ -132,5 +132,5 @@ if __name__ == "__main__":
             else:
                 dlog.append(key, 0)
 
-    dlog.close(True)
+    dlog.close()
     pprint("Done")    
