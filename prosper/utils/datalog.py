@@ -2,15 +2,10 @@
 #  Author:   Jorg Bornschein <bornschein@fias.uni-frankfurt.de)
 #  Lincense: Academic Free License (AFL) v3.0
 #
-"""
-
-"""
-
 from abc import ABCMeta, abstractmethod
 import six
 
 from os.path import isfile
-from multiprocessing import Process, Queue
 from time import strftime
 
 from mpi4py import MPI
@@ -151,10 +146,7 @@ class TextPrinter(DataHandler):
 
 class DataLog:
     def __init__(self, comm=MPI.COMM_WORLD):
-        self.comm = comm
-        self.gui_queue = None  # Used to communicate with GUI process
-        self.gui_proc = None  # GUI process handle
-        self.next_vizid = 0
+        self.comm = comm        
         self.policy = []  # Ordered list of (tbname, handler)-tuples
         self._lookup_cache = {}  # Cache for tblname -> hanlders lookups
 
@@ -222,9 +214,8 @@ class DataLog:
 
     def ignored(self, tblname):
         """
-        Returns True, then the given *name* is neither stored onto disk, 
-        nor visualized or triggered upon. When *ignored('something')* returns
-        True, it will make no difference if you *append* a value to table *tblname* or not.
+        Returns True, then the given *name* is not stored onto disk. When *ignored('something')*
+        returns True, it will make no difference if you *append* a value to table *tblname* or not.
 
         This can be especially useful when running a (MPI-)parallel programs and collecting 
         the value to be logged is an expensive operation.
@@ -276,36 +267,10 @@ class DataLog:
         else:
             raise ValueError("Please provide valid DataHandler object.")
 
-    def start_gui(self, gui_class):
-        if self.comm.rank != 0:
-            return
-
-        if self.gui_proc is not None:
-            raise RuntimeError("GUI already started")
-
-        def gui_startup(gui_class, gui_queue):
-            gui = gui_class(gui_queue)
-            gui.run()
-
-        self.gui_queue = Queue(2)  # Used to communicate with GUI process
-        self.gui_proc = Process(target=gui_startup,
-                                args=(gui_class, self.gui_queue))
-        self.gui_proc.start()
-
-    def close(self, quit_gui=False):
+    def close(self):
         """ Reset the datalog and close all registered DataHandlers """
         if self.comm.rank != 0:
             return
-
-        #for (tblname, handler) in self.policy:
-        #    handler.close()
-
-        if self.gui_proc is not None:
-            if quit_gui:
-                packet = {'cmd': 'quit', 'vizid': 0}
-                print("Sending quit!")
-                self.gui_queue.put(packet)
-            self.gui_proc.join()
 
 #=============================================================================
 # Create global default data logger
