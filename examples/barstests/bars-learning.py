@@ -86,6 +86,6 @@ if __name__ == "__main__":
     em.lparams = model_params
     em.run()
 
-    dlog.close(True)
+    dlog.close()
     pprint("Done")
 
