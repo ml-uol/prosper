@@ -16,7 +16,7 @@ from mpi4py import MPI
 try:
     from scipy import comb
 except ImportError:
-    from scipy.misc import comb
+    from scipy.special import comb
 
 import prosper.em as em
 import prosper.utils.parallel as parallel

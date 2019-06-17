@@ -7,7 +7,7 @@
 
 import numpy as np
 from math import pi
-from scipy.misc import comb
+from scipy.special import comb
 from mpi4py import MPI
 
 import prosper.em as em

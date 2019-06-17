@@ -5,7 +5,7 @@
 import numpy as np
 from mpi4py import MPI
 import itertools as itls
-from scipy.misc import comb
+from scipy.special import comb
 
 
 import prosper.utils.parallel as parallel

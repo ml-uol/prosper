@@ -5,7 +5,7 @@
 import numpy as np
 from mpi4py import MPI
 
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 
 from itertools import combinations
 from abc import ABCMeta, abstractmethod
