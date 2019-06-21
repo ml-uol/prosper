@@ -33,7 +33,7 @@ params_gt = {
 }
 
 from prosper.em.annealing import LinearAnnealing
-anneal = LinearAnnealing(10)
+anneal = LinearAnnealing(100)
 anneal['T'] = [(0, 2.), (.7, 1.)]
 anneal['Ncut_factor'] = [(0,0.),(2./3,1.)]
 anneal['anneal_prior'] = False

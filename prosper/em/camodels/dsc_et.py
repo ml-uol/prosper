@@ -53,7 +53,7 @@ def get_states2(states, Hprime, gamma):
     return tmp
 
 
-def generate_state_matrix(Hprime, gamma):
+def generate_state_matrix(Hprime, gamma,states=None):
     """Full combinatorics of Hprime-dim binary vectors with at most gamma ones.
 
     :param Hprime: Vector length
@@ -62,24 +62,12 @@ def generate_state_matrix(Hprime, gamma):
     :param gamma: int
 
     """
-    sl = []
-    for g in range(2,gamma+1):
-        for s in combinations(list(range(Hprime)), g):
-            sl.append( np.array(s, dtype=np.int8) )
-    state_list = sl
+    state_matrix = get_states_np(states,Hprime,gamma)
+    no_states = state_matrix.shape[0]
 
-    no_states = len(sl)
-    no_states = no_states
 
-    sm = np.zeros((no_states, Hprime), dtype=np.uint8)
-    for i in range(no_states):
-        s = sl[i]
-        sm[i, s] = 1
-    state_matrix = sm
-    state_abs = sm.sum(axis=1)
-    #print("state matrix updated")
-
-    return state_list, no_states, state_matrix, state_abs
+    state_abs = (state_matrix!=0).sum(axis=1)
+    return no_states, state_matrix, state_abs
 
 
 class DSC_ET(CAModel):
@@ -836,7 +824,8 @@ class DSC_ET(CAModel):
                 self.gamma+=1
 
             print("Rank %i: Updating state matrix and running again." % comm.rank)
-            self.state_list, self.no_states, self.state_matrix, self.state_abs = generate_state_matrix(self.Hprime, self.gamma)
+            self.no_states, self.state_matrix, self.state_abs = generate_state_matrix(self.Hprime, self.gamma, self.states)
+            # self.state_list, self.no_states, self.state_matrix, self.state_abs = generate_state_matrix(self.Hprime, self.gamma)
 
         if not logprob:
             res['m'] = np.exp(res['m'])
