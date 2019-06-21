@@ -108,6 +108,6 @@ International Conference on Latent Variable Analysis and Signal Separation (LVA/
 Expectation Truncation and the Benefits of Preselection in Training Generative Models.
 Journal of Machine Learning Research 11:2855-2900. 
 
-[5] G. Exarchakis, and J. Lücke (2017).
+[7] G. Exarchakis, and J. Lücke (2017).
 Discrete Sparse Coding.
 Neural Computation, 29(11), 2979-3013.
