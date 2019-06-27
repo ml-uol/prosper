@@ -408,6 +408,7 @@ class Ternary_ET(CAModel):
         my_y = test_data['y']        
         my_N, D = my_y.shape
         H = self.H
+        Hprime_start, gamma_start = self.Hprime, self.gamma
 
         # Prepare return structure
         if topK==-1:
@@ -485,5 +486,7 @@ class Ternary_ET(CAModel):
             res['am'] = np.log(res['am'])
 
         comm.Barrier()
+
+        self.Hprime, self.gamma = Hprime_start, gamma_start
 
         return res
