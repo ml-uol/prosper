@@ -667,55 +667,6 @@ class DSC_ET(CAModel):
 
     def inference(self, anneal, model_params, test_data, topK=10, logprob=False, adaptive=True,
         Hprime_max=None, gamma_max=None):
-        W = model_params['W']
-        my_y = my_data['y']
-        D, H = W.shape
-        my_N, D = my_y.shape
-
-        # Prepare return structure
-        res = {
-            's': np.zeros( (my_N, topK, H), dtype=np.int8),
-            'm': np.zeros( (my_N, H) ),
-            'p': np.zeros( (my_N, topK) ),
-            'gamma': np.zeros( (my_N,) ),
-            'Hprime': np.zeros( (my_N,) )
-        }
-
-        if 'candidates' not in my_data:
-            my_data = self.select_Hprimes(model_params, my_data)
-            my_cand = my_data['candidates']
-
-        my_suff_stat = self.E_step(anneal, model_params, my_data)
-        my_logpj = my_suff_stat['logpj']
-        my_corr = my_logpj.max(axis=1)           # shape: (my_N,)
-        my_logpjc = my_logpj - my_corr[:, None]    # shape: (my_N, no_states)
-        my_pjc = np.exp(my_logpjc)              # shape: (my_N, no_states)
-        my_denomc = my_pjc.sum(axis=1)             # shape: (my_N)
-
-        idx = np.argsort(my_logpjc, axis=-1)[:, ::-1]
-        for n in range(my_N):                                   # XXX Vectorize XXX
-            for m in range(topK):
-                this_idx = idx[n, m]
-                # res['p'][n, m] = my_pjc[n, this_idx] / my_denomc[n]
-                if logprob:
-                    res['p'][n_,m] = my_logpjc[n, this_idx] - np.log(my_denomc[n])
-                else:
-                    res['p'][n_,m] = my_pjc[n, this_idx] / my_denomc[n]
-                if this_idx == 0:
-                    pass
-                elif this_idx < ((self.K-1)*H + 1):
-                    s_prime = self.single_state_matrix[this_idx-1,:]
-                    res['s'][n, m, :] = s_prime
-                else:
-                    s_prime = self.state_matrix[this_idx - (self.K-1)*H - 1,:]
-                    res['s'][n, m, my_cand[n, :]] = s_prime
-
-        if not logprob:
-            res['m'] = np.exp(res['m'])
-
-        return res
-    def inference(self, anneal, model_params, test_data, topK=10, logprob=False, adaptive=True,
-        Hprime_max=None, gamma_max=None):
         """
         Perform inference with the learned model on test data and return the top K configurations with their
         posterior probabilities. 
