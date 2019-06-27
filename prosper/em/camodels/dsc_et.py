@@ -745,6 +745,7 @@ class DSC_ET(CAModel):
         my_y = test_data['y']
         my_N, D = my_y.shape
         H = self.H
+        Hprime_start, gamma_start = self.Hprime, self.gamma
 
         # Prepare return structure
         if topK==-1:
@@ -831,6 +832,8 @@ class DSC_ET(CAModel):
             res['m'] = np.exp(res['m'])
 
         comm.Barrier()
+
+        self.Hprime, self.gamma = Hprime_start, gamma_start
 
         return res
 
