@@ -60,12 +60,6 @@ if __name__ == "__main__":
     pprint("  saving results to:      %s" % output_path)
     pprint()
 
-    # Generate bars data
-    # params_gt = {
-        # 'W'     :  10*generate_bars_dict(H),
-        # 'pi'    :  p_bar,
-        # 'sigma' :  2.0
-    # }
     my_data = model.generate_data(params_gt, N_train // comm.size)
     my_test_data = model.generate_data(params_gt, N_test // comm.size)
 
@@ -98,8 +92,7 @@ if __name__ == "__main__":
     
     pprint(" Infering Bars from the test set")    
     prms = {'topK' : 5, 'adaptive' : True, 'Hprime_max' : model.Hprime+3, 'gamma_max' : model.gamma+3}
-    params_for_inference = em.lparams
-    # params_for_inference = params_gt
+    params_for_inference = em.lparams # alternatively: params_for_inference = params_gt
     res=model.inference(anneal,params_for_inference,my_test_data,**prms)
 
     # Store results
