@@ -36,7 +36,7 @@ class DataHandler(object):
         pass
 
     def append_all(self, valdict):
-        for key, val in list(valdict.items()):
+        for key, val in valdict.items():
             self.append(key, val)
 
     def remove(self, tblname):
@@ -137,7 +137,7 @@ class TextPrinter(DataHandler):
         pprint("  %8s = %s " % (tblname, value))
 
     def append_all(self, valdict):
-        for (name, val) in list(valdict.items()):
+        for (name, val) in valdict.items():
             pprint("  %8s = %s \n" % (name, val), end="")
 
 #=============================================================================
@@ -195,7 +195,7 @@ class DataLog:
 
         # Construct a set with all handlers to be called
         all_handlers = set()
-        for tblname, val in list(valdict.items()):
+        for tblname, val in valdict.items():
             hl = self._lookup(tblname)
             all_handlers = all_handlers.union(hl)
 
@@ -204,7 +204,7 @@ class DataLog:
             # is interested in
         for handler in all_handlers:
             argdict = {}
-            for tblname, val in list(valdict.items()):
+            for tblname, val in valdict.items():
                 hl = self._lookup(tblname)
 
                 if handler in hl:

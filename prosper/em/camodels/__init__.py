@@ -148,7 +148,7 @@ class CAModel(Model):
 
         # Construct partial my_pdata...
         my_pdata = {}
-        for key, val in list(my_data.items()):
+        for key, val in my_data.items():
             my_pdata[key] = val[sel]
 
         return my_pdata

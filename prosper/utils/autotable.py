@@ -184,7 +184,7 @@ class AutoTable:
 
         >>> tbl.append( { 't':0.23 , 'D':np.zeros((10,10)) )
         """
-        for name, value in list(valdict.items()):
+        for name, value in valdict.items():
             self.append(name, value)
 
     def appendList(self, name, value):

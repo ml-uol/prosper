@@ -208,7 +208,7 @@ class DSC_ET(CAModel):
 
         # Construct partial my_pdata...
         my_pdata = {}
-        for key, val in list(my_data.items()):
+        for key, val in my_data.items():
             my_pdata[key] = val[sel]
 
         return my_pdata
@@ -268,7 +268,7 @@ class DSC_ET(CAModel):
         uniform = np.random.uniform
         comm = self.comm
 
-        for param, policy in list(self.noise_policy.items()):
+        for param, policy in self.noise_policy.items():
             pvalue = model_params[param]
             if (not param+'_noise'=='pi_noise') and anneal[param+"_noise"] != 0.0:
                 if np.isscalar(pvalue):         # Param to be noisified is scalar

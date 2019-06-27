@@ -74,7 +74,7 @@ class Model():
         normal = np.random.normal
         comm = self.comm
 
-        for param, policy in list(self.noise_policy.items()):
+        for param, policy in self.noise_policy.items():
             pvalue = model_params[param]
             if anneal[param+"_noise"] != 0.0:
                 if np.isscalar(pvalue):         # Param to be noisified is scalar
