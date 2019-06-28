@@ -4,7 +4,6 @@
 #
 
 import sys
-sys.path.insert(0, "..")
 
 from time import sleep
 import numpy as np

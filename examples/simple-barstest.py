@@ -3,7 +3,6 @@
 from __future__ import division
 
 import sys
-sys.path.insert(0, '..')
 
 import numpy as np
 from mpi4py import MPI
