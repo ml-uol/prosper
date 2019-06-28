@@ -488,5 +488,6 @@ class Ternary_ET(CAModel):
         comm.Barrier()
 
         self.Hprime, self.gamma = Hprime_start, gamma_start
+        self.fullSM, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(self.Hprime, self.gamma, self.H, self.states)
 
         return res
