@@ -301,7 +301,7 @@ class CAModel(Model):
 
         test_data_tmp = {'y' : my_y}
         which = np.ones(my_N,dtype=bool)
-
+        
         while which.any():
 
             ind_n = np.where(which)[0]            
@@ -372,5 +372,6 @@ class CAModel(Model):
         comm.Barrier()
 
         self.Hprime, self.gamma = Hprime_start, gamma_start
+        self.state_list, self.no_states, self.state_matrix, self.state_abs = generate_state_matrix(self.Hprime, self.gamma)
 
         return res
