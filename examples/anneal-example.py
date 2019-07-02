@@ -8,7 +8,7 @@
   piecewise-linear annealing schedules.
 """
 
-from __future__ import division
+
 
 import sys
 sys.path.insert(0, '..')
@@ -30,6 +30,6 @@ anneal['param_b'] = 0.5
 assert anneal['param_c'] == 0.0
 
 while not anneal.finished:
-    print "[%3d] T=%.2f   parameter_a=%.2f     parameter_b=%.2f" % (anneal['step'], anneal['T'], anneal['param_a'], anneal["param_b"])
+    print("[%3d] T=%.2f   parameter_a=%.2f     parameter_b=%.2f" % (anneal['step'], anneal['T'], anneal['param_a'], anneal["param_b"]))
     anneal.next()
 

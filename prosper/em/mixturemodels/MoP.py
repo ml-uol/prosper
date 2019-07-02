@@ -79,10 +79,10 @@ class MoP(MixtureModel):
 
         W = model_params['W']
 
-        for n in xrange(my_N):
+        for n in range(my_N):
             comp = s[n]
 
-            for d in xrange(D):
+            for d in range(D):
                 y[n,d] = np.random.poisson(W[d,s[n]], 1)
 
 

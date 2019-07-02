@@ -2,22 +2,23 @@
 #  Lincense: Academic Free License (AFL) v3.0
 #
 
-from __future__ import division
+
 
 from abc import ABCMeta, abstractmethod
+import six
 
 import numpy as np
 import time
 
 from prosper.utils.datalog import dlog
 
+six.add_metaclass
 class Annealing():
     """ Base class for implementations of annealing schemes.
 
     Implementations deriving from this class control the cooling schedule 
     and provide some additional control functions used in the EM algorithm.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self):
         pass
@@ -94,7 +95,7 @@ class LinearAnnealing(Annealing):
 
         points = self.anneal_params[param_name]
 
-        for i in xrange(len(points)):
+        for i in range(len(points)):
             pos, _ = points[i]
             if pos > cur_pos:
                 break
@@ -102,7 +103,7 @@ class LinearAnnealing(Annealing):
         left_pos, left_val = points[i-1]
         right_pos, right_val = points[i]
             
-        frac = (cur_pos-left_pos) / (right_pos-left_pos)
+        frac = float((cur_pos-left_pos)) / (right_pos-left_pos)
         return frac * (right_val-left_val) + left_val
 
     def __setitem__(self, param_name, points):

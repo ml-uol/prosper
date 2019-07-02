@@ -4,12 +4,13 @@
 """
 """
 
-from __future__ import division
+
 
 import numpy as np
 from mpi4py import MPI
 
 from abc import ABCMeta, abstractmethod
+import six
 
 import prosper.utils.tracing as tracing
 import prosper.utils.parallel as parallel
@@ -19,8 +20,9 @@ from prosper.utils.datalog import dlog
 
 #=============================================================================
 # General EM Model Base Class
-
+six.add_metaclass(ABCMeta)
 class Model():
+#class Model(metaclass=ABCMeta):
     """ Model Base Class.
 
     Includes knowledge about parameters, data generation, model specific 
@@ -28,7 +30,6 @@ class Model():
 
     Specific models will be subclasses of this abstract base class.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, comm=MPI.COMM_WORLD):
         self.comm = comm

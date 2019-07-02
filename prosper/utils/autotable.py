@@ -114,7 +114,7 @@ class AutoTable:
                             type(value))
 
         # Check if we need to create a new table
-        if not self.tables.has_key(name):
+        if name not in self.tables:
             self._create_table(name, value)
 
         value = value.reshape((1, ) + value.shape)
@@ -154,11 +154,11 @@ class AutoTable:
             raise TypeError("Don't know how to handle values of type '%s'",
                             type(value))
 
-        if not self.tables.has_key(name):
+        if name not in self.tables:
             pass
         else:
             if self.warnings:
-                print "Warning! The previous data with key %s is being overwritten" % name
+                print("Warning! The previous data with key %s is being overwritten" % name)
             self._delete_table(name)
 
         try:
@@ -211,7 +211,7 @@ class AutoTable:
                             type(value))
 
         # Check if we need to create a new table
-        if not self.tables.has_key(name):
+        if name not in self.tables:
             self._create_table_list(name, value)
 
         value = value.reshape(value.shape)
@@ -273,7 +273,7 @@ class AutoTable:
             filters = tables.Filters(complevel=self.compression_level,
                                      complib='zlib',
                                      shuffle=True)
-            self.tables[name] = h5.createVLArray(h5.root, name, h5type,
+            self.tables[name] = h5.create_vlarray(h5.root, name, h5type,
                                                  filters=filters)
         self.types[name] = type(example)
 
@@ -319,7 +319,7 @@ class AutoTable:
             filters = tables.Filters(complevel=self.compression_level,
                                      complib='zlib',
                                      shuffle=True)
-            self.tables[name] = h5.createVLArray(h5.root, name, h5type,
+            self.tables[name] = h5.create_vlarray(h5.root, name, h5type,
                                                  filters=filters)
         self.types[name] = type(example)
 
@@ -339,7 +339,7 @@ class AutoTable:
         Removing the numpy specific operation in appending
         """
         # Check if we need to create a new table
-        if not self.tables.has_key(name):
+        if name not in self.tables:
             self._create_table(name, value)
 
         try:
@@ -357,11 +357,11 @@ class AutoTable:
         Removing the numpy specific operation in appending
         """
         # Check if we need to create a new table
-        if not self.tables.has_key(name):
+        if name not in self.tables:
             self._create_table_list(name, value)
 
         try:
-            map(self.tables[name].append, value)
+            list(map(self.tables[name].append, value))
         except ValueError:
             raise TypeError('Wrong datatype for "%s" field' % name)
 

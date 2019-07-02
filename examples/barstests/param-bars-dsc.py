@@ -1,7 +1,6 @@
 import numpy as np
 from prosper.utils.barstest import generate_bars_dict
 
-np.random.seed(1)
 
 # Number of datapoints to generate
 N = 1000
@@ -14,24 +13,27 @@ H=2*size     # number of latents
 D=size**2    # dimensionality of observed data
 
 # Approximation parameters for Expectation Truncation
-Hprime = 8
+Hprime = 7
 gamma = 5
+
+# Latent states of dsc
+states = np.array([0.,1.,2.])
+pi = np.array([0.8,0.15,0.05])
  
 # Import and instantiate a model
-from prosper.em.camodels.mca_et import MCA_ET
-model = MCA_ET(D, H, Hprime, gamma)
+from prosper.em.camodels.dsc_et import DSC_ET
+model = DSC_ET(D, H, Hprime, gamma, states=states)
 
 
 # Ground truth parameters. Only used to generate training data.
 params_gt = {
     'W'     :  10*generate_bars_dict(H),
-    'pi'    :  1.0 / size,
+    'pi'    :  pi,
     'sigma' :  2.0
 }
 
-# Choose annealing schedule
 from prosper.em.annealing import LinearAnnealing
-anneal = LinearAnnealing(300)
-anneal['T'] = [(0, 4.), (.8, 1.)]
+anneal = LinearAnnealing(100)
+anneal['T'] = [(0, 2.), (.7, 1.)]
 anneal['Ncut_factor'] = [(0,0.),(2./3,1.)]
 anneal['anneal_prior'] = False

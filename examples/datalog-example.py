@@ -2,7 +2,6 @@
 #
 #  Lincense: Academic Free License (AFL) v3.0
 #
-
 import sys
 sys.path.insert(0, "..")
 
@@ -11,17 +10,12 @@ import numpy as np
 
 from prosper.utils.parallel import pprint
 from prosper.utils.datalog import dlog, StoreToH5, TextPrinter
-from prosper.visualize.gui import GUI, RFViewer, YTPlotter
 
 # Parameters
 rf_shape = (26, 26)
 H = 16
 
 # Configure Data-Logger
-dlog.start_gui(GUI)
-dlog.set_handler('W', RFViewer, rf_shape=rf_shape)
-dlog.set_handler('S', YTPlotter)
-dlog.set_handler('C', YTPlotter)
 dlog.set_handler(('T', 'S', 'C'), TextPrinter)
 
 # And GO!

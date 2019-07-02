@@ -4,7 +4,7 @@
 #  Lincense: Academic Free License (AFL) v3.0
 #
 
-from __future__ import division
+
 
 # import sys
 # sys.path.insert(0, '..')
@@ -25,9 +25,7 @@ from prosper.utils.datalog import dlog
 #=============================================================================#
 # Abstract base class for mixture models
 
-class MixtureModel(Model):
-    __metaclass__ = ABCMeta
-
+class MixtureModel(Model, metaclass=ABCMeta):
     def __init__(self, D, H, to_learn=['W', 'pies'], comm=MPI.COMM_WORLD):
         """
 

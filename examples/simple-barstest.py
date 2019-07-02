@@ -1,7 +1,4 @@
 #!/usr/bin/env python
-
-from __future__ import division
-
 import sys
 sys.path.insert(0, '..')
 
@@ -9,12 +6,10 @@ import numpy as np
 from mpi4py import MPI
 
 from prosper.utils import create_output_path 
-from prosper.utils.autotable import AutoTable
 from prosper.utils.parallel import pprint, stride_data
-from prosper.utils.barstest import generate_bars
+from prosper.utils.barstest import generate_bars_dict
 
 from prosper.utils.datalog import dlog, StoreToH5, TextPrinter, StoreToTxt
-from prosper.visualize.gui import GUI, RFViewer, YTPlotter
 
 from prosper.em import EM
 from prosper.em.annealing import LinearAnnealing
@@ -48,18 +43,12 @@ assert gamma <= Hprime
 assert D == D2**2
 
 # Configure DataLogger
-dlog.start_gui(GUI)
 print_list = ('T', 'pi', 'sigma')
 dlog.set_handler(print_list, TextPrinter)
-dlog.set_handler('W', RFViewer, rf_shape=(D2, D2))
-dlog.set_handler(['pi'], YTPlotter)
-dlog.set_handler(['sigma'], YTPlotter)
-#dlog.set_handler('y', RFViewer, rf_shape=(D2, D2))
-#dlog.set_handler(('W', 'pi', 'sigma', 'mu', 'y', 'MAE', 'N'), StoreToH5, output_path +'/result.h5')
 
 # Invent some ground truth parameter models
 params_gt = {
-    'W'     :  10*generate_bars(H),  
+    'W'     :  10*generate_bars_dict(H),  
     'pi'    :  2. / H,
     'sigma' :  1.0
 }
@@ -82,6 +71,6 @@ em.data = my_data
 em.lparams = model_params
 em.run()
 
-dlog.close(True)
+dlog.close()
 pprint("Done")
 

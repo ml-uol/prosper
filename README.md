@@ -100,10 +100,14 @@ Advances in Neural Information Processing Systems 23, 1939-1947.
 Are V1 simple cells optimized for visual occlusions? A comparative study.
 PLOS Computational Biology 9(6): e1003062.
 
-[5] Exarchakis, M. Henniges, J. Eggert, and J. Lücke (2012).
-Ternary Sparse Coding .
+[5] G. Exarchakis, M. Henniges, J. Eggert, and J. Lücke (2012).
+Ternary Sparse Coding.
 International Conference on Latent Variable Analysis and Signal Separation (LVA/ICA), 204-212. 
 
 [6] J. Lücke and J. Eggert (2010). 
 Expectation Truncation and the Benefits of Preselection in Training Generative Models.
 Journal of Machine Learning Research 11:2855-2900. 
+
+[7] G. Exarchakis, and J. Lücke (2017).
+Discrete Sparse Coding.
+Neural Computation, 29(11), 2979-3013.
