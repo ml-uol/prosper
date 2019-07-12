@@ -3,7 +3,6 @@
 #  Lincense: Academic Free License (AFL) v3.0
 #
 import sys
-sys.path.insert(0, "..")
 
 from time import sleep
 import numpy as np

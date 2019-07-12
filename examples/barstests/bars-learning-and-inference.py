@@ -4,7 +4,6 @@
 #
 
 import sys
-sys.path.insert(0, '../..')
 
 import numpy as np
 from mpi4py import MPI

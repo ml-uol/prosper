@@ -32,6 +32,23 @@ prosper/       - Python library/framework for MPI parallelized
 examples/   - Small examples for initializing and running the models
 
 
+Installation
+=======
+
+To install the library run:
+
+```
+  $ git clone git@bitbucket.org:mlold/prosper.git
+  $ cd prosper
+  $ python setup.py install
+```
+
+Optionally you can replace the final line with:
+```
+  $ python setup.py develop
+```
+This option installs the library using links and it allows the user to edit the library without reinstalling it (useful for Prosper developers).
+
 Running
 =======
 
