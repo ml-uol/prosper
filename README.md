@@ -86,11 +86,11 @@ To run the same script as above, e.g.,
 
 a) On a multi-core machine with 32 cores:
 
- `$ mpirun -np 32 python bars-run-all.py param-bars-<...>.py`
+ `$ mpirun -np 32 bars-learning-and-inference.py param-bars-<...>.py`
 
 b) On a cluster:
 
- `$ mpirun --hostfile machines python bars-run-all.py param-bars-<...>.py`
+ `$ mpirun --hostfile machines python bars-learning-and-inference.py param-bars-<...>.py`
 
  where 'machines' contains a list of suitable machines.
 
