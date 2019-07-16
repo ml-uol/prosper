@@ -38,7 +38,7 @@ Installation
 To install the library run:
 
 ```
-  $ git clone git@bitbucket.org:mlold/prosper.git
+  $ git clone git@github.com:mlold/prosper.git
   $ cd prosper
   $ python setup.py install
 ```
@@ -56,7 +56,7 @@ To run some toy examples:
 
 ```
   $ cd examples/barstest
-  $ python bars-run-all.py param-bars-<...>.py
+  $ python bars-learning-and-inference.py param-bars-<...>.py
 ```
 
 where <...> should be appropriately replaced to correspond to one of the parameter 
