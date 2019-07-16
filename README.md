@@ -16,11 +16,10 @@ are trained using a truncated Expectation Maximization (EM) algorithm [6].
 Software dependencies
 =====================
  
- * Python (>= 2.6)
- * NumPy (>= 1.14)
- * SciPy (>= 1.3)
- * pytables (reasonably recent)
- * mpi4py (>= 1.3)
+ Python related dependencies can be installed using:
+ ```
+  $ pip install -r requirements.txt
+```
 
 Overview
 ========
