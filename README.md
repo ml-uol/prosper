@@ -16,10 +16,22 @@ are trained using a truncated Expectation Maximization (EM) algorithm [6].
 Software dependencies
 =====================
  
- Python related dependencies can be installed using:
- ```
+Python related dependencies can be installed using:
+```
   $ pip install -r requirements.txt
 ```
+
+MPI4PY also requires a system level installation of MPI. 
+You can do that on MacOS using Homebrew:
+```
+  $ brew install mpich
+```
+for Ubuntu systems:
+```
+  $ sudo apt install mpich
+```
+for any other system you might wish to review the relevent section of the MPI4PY [installation guidelines](https://mpi4py.readthedocs.io/en/stable/appendix.html#building-mpi)
+
 
 Overview
 ========
@@ -32,7 +44,7 @@ examples/   - Small examples for initializing and running the models
 
 
 Installation
-=======
+============
 
 To install the library run:
 
