@@ -8,8 +8,8 @@ Introduction
 This package contains all the source code to reproduce the numerical
 experiments described in the paper. It contains a parallelized implementation
 of the Binary Sparse Coding (BSC) [1], Gaussian Sparse Coding (GSC) [2], 
-Maximum Causes Analysis (MCA) [3], Maximum Magnitude Causes Analysis (MMCA) [4] and 
-Ternary Sparse Coding (TSC) [5] models. All these probabilistic generative models 
+Maximum Causes Analysis (MCA) [3], Maximum Magnitude Causes Analysis (MMCA) [4], 
+Ternary Sparse Coding (TSC) [5], and Discrete Sparse Coding [7] models. All these probabilistic generative models 
 are trained using a truncated Expectation Maximization (EM) algorithm [6].
 
 
