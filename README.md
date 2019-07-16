@@ -17,8 +17,8 @@ Software dependencies
 =====================
  
  * Python (>= 2.6)
- * NumPy (reasonably recent)
- * SciPy (reasonably recent)
+ * NumPy (>= 1.14)
+ * SciPy (>= 1.3)
  * pytables (reasonably recent)
  * mpi4py (>= 1.3)
 
