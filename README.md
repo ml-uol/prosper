@@ -1,4 +1,4 @@
-
+![alt text](https://github.com/ml-uol/prosper/raw/master/docs/_static/prosper_logo_square_color.png)
 [![Build Status](https://api.shippable.com/projects/557c833cedd7f2c05214da81/badge?branchName=master)](https://app.shippable.com/projects/557c833cedd7f2c05214da81/builds/master)
 [![Documentation](https://readthedocs.org/projects/parallel-em/badge/?version=latest)](http://parallel-em.readthedocs.org/en/latest/)
 
