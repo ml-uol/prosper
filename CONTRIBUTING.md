@@ -91,7 +91,7 @@ following rules before submitting:
   import numpy; print("NumPy", numpy.__version__)
   import tables; print("PyTables", tables.__version__)
   import scipy; print("SciPy", scipy.__version__)
-  import prosper; print("prosper", prosper.__version__)
+  import prosper; print("prosper", ProSper.__version__)
   ```
 
 
