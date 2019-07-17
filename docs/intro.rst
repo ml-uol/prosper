@@ -13,7 +13,7 @@ Installation
 ============
 
 The recommended approch to install the framework is to obtain 
-the most recent stable version from `bitbucket.org`:
+the most recent stable version from `github.com`:
 
 .. code-block:: bash
 
