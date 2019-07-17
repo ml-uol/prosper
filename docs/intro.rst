@@ -17,7 +17,7 @@ the most recent stable version from `bitbucket.org`:
 
 .. code-block:: bash
 
-    git checkout https://bitbucket.org/mlold/pylib.git
+    git checkout https://github.com/ml-uol/prosper.git
     cd pylib
     python setup.py develop --user
 
