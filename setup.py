@@ -12,7 +12,7 @@ def read(fname):
 setup(name='ProSper',
       version=__VERSION__,
       description='A Python Library for Probabilistic Sparse Coding with Learnable Priors and Different Superposition Assumptions',
-      url='http://bitbucket.org/mlold/pylib',
+      url='http://github.com/ml-uol/prosper',
       author='Jorg Bornschein, Abdul-Saboor Sheikh, Zhenwen Dai, Georgios Exarchakis, Marc Henniges, Julian Eggert, Jorg Lucke',
       author_email='bornj@iro.umontreal.ca',
       license='AFL3',
