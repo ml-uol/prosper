@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# pylib documentation build configuration file, created by
+# ProSper documentation build configuration file, created by
 # sphinx-quickstart on Mon Jul 20 14:51:18 2015.
 #
 # This file is execfile()d with the current directory set to its
@@ -61,8 +61,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'pylib'
-copyright = '2015, Pylib Authors'
+project = 'ProSper'
+copyright = '2015, ProSper Authors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -194,7 +194,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'pylibdoc'
+htmlhelp_basename = 'prosperdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -214,8 +214,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'pylib.tex', 'pylib Documentation',
-   'Pylib Authors', 'manual'),
+  ('index', 'ProSper.tex', 'ProSper Documentation',
+   'ProSper Authors', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -244,8 +244,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'pylib', 'pylib Documentation',
-     ['Pylib Authors'], 1)
+    ('index', 'ProSper', 'ProSper Documentation',
+     ['ProSper Authors'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -258,8 +258,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'pylib', 'pylib Documentation',
-   'Pylib Authors', 'pylib', 'One line description of project.',
+  ('index', 'ProSper', 'ProSper Documentation',
+   'ProSper Authors', 'ProSper', 'One line description of project.',
    'Miscellaneous'),
 ]
 

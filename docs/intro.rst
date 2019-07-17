@@ -18,7 +18,7 @@ the most recent stable version from `bitbucket.org`:
 .. code-block:: bash
 
     git checkout https://github.com/ml-uol/prosper.git
-    cd pylib
+    cd prosper
     python setup.py develop --user
 
 After installation you should run the testsuite to ensure all neccessary 
