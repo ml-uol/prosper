@@ -4,15 +4,17 @@
    contain the root `toctree` directive.
 
 Welcome to ProSper's documentation!
-=================================
+===================================
 
 Contents:
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     intro
     em
+    camodels
+    mixturemodels
 
 Indices and tables
 ==================

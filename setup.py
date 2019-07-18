@@ -31,4 +31,10 @@ setup(name='ProSper',
                    'Operating System :: POSIX :: Linux',
                    'Programming Language :: Python :: 2.7',
                    'Topic :: Scientific/Engineering :: Artificial Intelligence'],
+      command_options={
+        'build_sphinx': {
+            'project': ('setup.py', 'ProSper'),
+            'version': ('setup.py', __VERSION__),
+            'release': ('setup.py', __VERSION__),
+            'source_dir': ('setup.py', 'docs')}}
 )
