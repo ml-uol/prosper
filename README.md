@@ -50,7 +50,7 @@ Installation
 To install the library run:
 
 ```
-  $ git clone git@github.com:ml-uol/prosper.git
+  $ git clone https://github.com/ml-uol/prosper.git
   $ cd prosper
   $ python setup.py install
 ```
