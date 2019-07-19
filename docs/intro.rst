@@ -40,6 +40,6 @@ Create some artifical training data by running `bars-create-data.py`:
 .. code-block:: bash
 
     cd examples/barstests
-    python bars-create-data.py
+    python bars-learnign-and-inference.py param-bars-dsc.py
 
 ToDo: this does not work right now.

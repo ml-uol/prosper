@@ -60,7 +60,7 @@ def generate_state_matrix(Hprime, gamma, H, states):
     return fullSM, state_matrix, no_states, states_abs
 
 
-class Ternary_ET(CAModel):
+class TSC_ET(CAModel):
     @tracing.traced
     def __init__(self, D, H, Hprime, gamma,states=np.array([-1.,0.,1.]), to_learn=['W', 'pi', 'sigma'], comm=MPI.COMM_WORLD):
         Model.__init__(self, comm)

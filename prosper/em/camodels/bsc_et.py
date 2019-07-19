@@ -23,6 +23,7 @@ from prosper.utils.datalog import dlog
 from prosper.em.camodels import CAModel
 
 class BSC_ET(CAModel):
+    
     def __init__(self, D, H, Hprime, gamma, to_learn=['W', 'pi', 'sigma'], comm=MPI.COMM_WORLD):
         CAModel.__init__(self, D, H, Hprime, gamma, to_learn, comm)
 

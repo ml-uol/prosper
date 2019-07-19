@@ -20,13 +20,23 @@ from prosper.em.camodels import CAModel
 from scipy.special import gammaln
 
 
-def multinom2(a,b):
+def multinom2(n,k):
+    """Multinomial Coefficient
+    The function returns the multinomial coefficient, i.e. the number of combinations of :math:`n` items group in :math:`k_1,\, k_2,\, \ldots,k_n` groups.
+
+    Parameters
+    ----------
+    n : int
+        number of items in multinomial coefficient
+    k : (...,) ndarray
+        partition configuration of n items, s.t. :math:`\sum_i k_i =n`
+    
+    Returns
+    -------
+    int :
+        multinomial coefficient :math:`\frac{n}{k_1!k_2!\ldots k_n!}`
     """
-    :param a: array
-    :param b: array
-    :return:np.exp(gammaln(a)-gammaln(b).sum())
-    """
-    return np.exp(gammaln(a+1)-gammaln(b+1).sum())
+    return np.exp(gammaln(n+1)-gammaln(k+1).sum())
 
 def np_product(iterable,repeat=2):
     return np.array(iterable)[np.moveaxis(
@@ -53,14 +63,27 @@ def get_states2(states, Hprime, gamma):
     return tmp
 
 
-def generate_state_matrix(Hprime, gamma,states=None):
-    """Full combinatorics of Hprime-dim binary vectors with at most gamma ones.
-
-    :param Hprime: Vector length
-    :type Hprime: int
-    :param gamma: Maximum number of ones
-    :param gamma: int
-
+def generate_state_matrix(Hprime, gamma,states=np.array([0,1])):
+    """Full combinatorics of Hprime-dim discrete  vectors with more than one non-zero elements and at most gamma non-zeero elements.
+    
+    Parameters
+    ----------
+    Hprime : int
+        preselection approximation parameter
+    gamma : int
+        hard sparsity approximation parameter
+    states : ndarray, optional
+        possible discrete states
+    
+    Returns
+    -------
+    TYPE
+        no_states: int
+            number of states in the state
+        state_matrix: (no_states, Hprime) ndarray
+            the state matrix
+        state_abs: (no_states,) ndarray
+            the number of non-zero elements in a state    
     """
     state_matrix = get_states_np(states,Hprime,gamma)
     no_states = state_matrix.shape[0]
@@ -71,6 +94,44 @@ def generate_state_matrix(Hprime, gamma,states=None):
 
 
 class DSC_ET(CAModel):
+    """Discrete Sparse Coding
+
+    Implements learning and inference of a Discrete Sparse coding model under a variational approximation
+
+    Attributes
+    ----------
+    comm : MPI communicator
+    D : int
+        number of features
+    gamma : int
+        approximation parameter for maximum number of non-zero states
+    H : int
+        number of latent variables
+    Hprime : int
+        approximation parameter for latent space trunctation
+    K : int
+        number of different values the latent variables can take
+    no_states : (..., Hprime) ndarray  
+        number of different states of latent variables except singleton states and zero state
+    single_state_matrix : ((K-1)*H, H) ndarray
+        matrix that holds all possible singleton states
+    state_abs : (no_states, ) ndarray
+        number of non-zero elements in the rows of the state_matrix
+    state_matrix : (no_states, Hprime) ndarray
+        latent variable states taken into account during the em algorithm
+    states : (K,) ndarray
+        the differnt values that a latent variable can take must include 0 and one more integer
+    to_learn : list
+        list of strings included in model_params.keys() that specify which parameters are going to be optimized
+
+    References
+    ----------
+    [1] G. Exarchakis, and J. Lücke (2017). Discrete Sparse Coding. Neural Computation, 29(11), 2979-3013.
+
+    [2] J. Lücke and J. Eggert (2010). Expectation Truncation and the Benefits of Preselection in Training Generative Models. Journal of Machine Learning Research 11:2855-2900.
+
+    """
+
     def __init__(self, D, H, Hprime, gamma,states=np.array([-1.,0.,1.]), to_learn=['W', 'pi', 'sigma'], comm=MPI.COMM_WORLD):
         CAModel.__init__(self, D, H, Hprime, gamma, to_learn, comm)
         self.comm = comm
@@ -89,7 +150,7 @@ class DSC_ET(CAModel):
         self.gamma = gamma
         self.states = states
         self.K = self.states.shape[0]
-        self.K_0 = int(np.argwhere(states == 0.))
+        self._K_0 = int(np.argwhere(states == 0.))
 
         # some sanity checks
         assert Hprime <= H
@@ -97,7 +158,7 @@ class DSC_ET(CAModel):
 
         # Noise Policy
         tol = 1e-5
-        self.noise_policy = {
+        self._noise_policy = {
             'W': (-np.inf, +np.inf, False),
             'pi': (tol,  1. - tol, False),
             'sigma': (0., +np.inf, False)
@@ -106,7 +167,7 @@ class DSC_ET(CAModel):
         # Generate state-space list
         ss = np.empty((0, self.H), dtype=np.int8)
         for i in range(self.K):
-            if (i == self.K_0):
+            if (i == self._K_0):
                 continue
             temp = np.eye(self.H, dtype=np.int8) * states[i]
             ss = np.concatenate((ss, temp))
@@ -126,15 +187,37 @@ class DSC_ET(CAModel):
         for i in range(self.K):
             self.state_abs[i, :] = (
                 self.state_matrix == self.states[i]).sum(axis=1)
-        self.state_abs[self.K_0, :] = self.H - \
-            self.state_abs.sum(0) + self.state_abs[self.K_0, :]
+        self.state_abs[self._K_0, :] = self.H - \
+            self.state_abs.sum(0) + self.state_abs[self._K_0, :]
 
 
     def check_params(self, model_params):
-        """ Sanity check.
-
+        """Sanity check.
+        
         Sanity-check the given model parameters. Raises an exception if
         something is severely wrong.
+        
+        Parameters
+        ----------
+        model_params : dict
+            dictionary of model parameters
+                model_params['W']:     (H,D) ndarray
+                    linear dictionary
+                model_params['pi']:    (K,) ndarray
+                    prior parameters
+                model_params['sigma']:  float
+                    standard deviation of noise model
+        
+        Returns
+        -------
+        dict
+            model parameters
+                model_params['W']:     (H,D) ndarray
+                    linear dictionary
+                model_params['pi']:    (K,) ndarray
+                    prior parameters
+                model_params['sigma']:  float
+                    standard deviation of noise model 
         """
         W     = model_params['W']
         pies  = model_params['pi']
@@ -153,6 +236,37 @@ class DSC_ET(CAModel):
         return model_params
 
     def generate_data(self, model_params, my_N, noise_on=True, gs=None, gp=None):
+        """
+        Parameters
+        ----------
+        model_params : dict
+            model parameters
+                model_params['W']:     (H,D) ndarray
+                    linear dictionary
+                model_params['pi']:    (K,) ndarray
+                    prior parameters
+                model_params['sigma']:  float
+                    standard deviation of noise model
+        my_N : int
+            number of datapoints for this process
+        noise_on : bool, optional
+            flag to control deterministic/stochastic generation. If True gaussian noise with standard deviation model_params['sigma'] is added to the data
+        gs : (my_N, H), optional
+            ground truth latent variables. This option is used for generating artificial data with particular latent variables. 
+            Defaults to randomly sampled latent variables from the prior
+        gp : (my_N, H), optional
+            ground truth posterior. This option is used for generating data that have a particular true posterior distribution.
+            Defaults to randomly sampled latent variables from the prior
+        
+        Returns
+        -------
+        dict
+            returns generated data
+                dict['y']: (my_N, D) ndarray
+                    generated data
+                dict['y']: (my_N, H) ndarray
+                    latent variable states that generated the data
+        """
         D = self.D
         H = self.H
         states = self.states
@@ -185,11 +299,25 @@ class DSC_ET(CAModel):
         return {'y': y, 's': s}
 
     def select_partial_data(self, anneal, my_data):
-        """ Select a partial data-set from my_data and return it.
-
+        """Select a partial data-set from my_data and return it.
+        
         The fraction of datapoints selected is determined by anneal['partial'].
         If anneal['partial'] is equal to either 1 or 0 the whole dataset will
         be returned.
+        
+        Parameters
+        ----------
+        anneal : Annealing object
+            Description
+        my_data : dict
+            dictionary of the dataset
+                my_data['y']: (my_N, D) ndarray
+                    the datapoints
+        
+        Returns
+        -------
+        TYPE
+            Description
         """
         partial = anneal['partial']
 
@@ -218,6 +346,30 @@ class DSC_ET(CAModel):
         Return a new data-dictionary which has been annotated with
         a data['candidates'] dataset. A set of self.Hprime candidates
         will be selected.
+        
+        Parameters
+        ----------
+        model_params : dict
+            model parameters
+                model_params['W']:     (H,D) ndarray
+                    linear dictionary
+                model_params['pi']:    (K,) ndarray
+                    prior parameters
+                model_params['sigma']:  float
+                    standard deviation of noise model
+        data : dict
+            dataset dictionary
+                data['y']: (my_n,D) ndarray
+                    datapoints
+        
+        Returns
+        -------
+        dict
+            dataset dictionary
+                data['y']: (my_n,D) ndarray
+                    datapoints
+                data['candidates']: (my_n,) ndarray
+                    indices of the best explained datapoints
         """
         my_N, D   = data['y'].shape
         H         = self.H
@@ -233,9 +385,9 @@ class DSC_ET(CAModel):
         l_pis=np.zeros((self.H*(self.K-1)))
         c=0
         for i in range(self.K):
-            if i ==self.K_0:
+            if i ==self._K_0:
                 continue
-            l_pis[c*H:(c+1)*H]+=np.log(pi[i]) + (self.H-1)*np.log(pi[self.K_0])
+            l_pis[c*H:(c+1)*H]+=np.log(pi[i]) + (self.H-1)*np.log(pi[self._K_0])
             c+=1
             # l_pis+=self.state_abs[i]*pi[i]
         # Allocate return structures
@@ -255,20 +407,32 @@ class DSC_ET(CAModel):
         return data
 
     def noisify_params(self, model_params, anneal):
-        """ Noisify model params.
-
-        Noisify the given model parameters according to self.noise_policy
+        """Noisify model params.
+        
+        Noisify the given model parameters according to self._noise_policy
         and the annealing object provided. The noise_policy of some model
         parameter PARAM will only be applied if the annealing object
         provides a noise strength via PARAM_noise.
-
+        
+        Parameters
+        ----------
+        model_params : TYPE
+            Description
+        anneal : TYPE
+            Description
+        
+        Returns
+        -------
+        TYPE
+            Description
+        
         """
         #H, D = self.H, self.D
         normal = np.random.normal
         uniform = np.random.uniform
         comm = self.comm
 
-        for param, policy in self.noise_policy.items():
+        for param, policy in self._noise_policy.items():
             pvalue = model_params[param]
             if (not param+'_noise'=='pi_noise') and anneal[param+"_noise"] != 0.0:
                 if np.isscalar(pvalue):         # Param to be noisified is scalar
@@ -309,17 +473,38 @@ class DSC_ET(CAModel):
         return model_params
 
     def E_step(self, anneal, model_params, my_data):
-        """ LinCA E_step
+        """Discrete Sparse Coding E-step
 
-        my_data variables used:
+        This function is responsible for finding an approximation of the posterior distribution given the model parameters.
 
-            my_data['y']           Datapoints
-            my_data['can']         Candidate H's according to selection func.
+        Parameters
+        ----------
+        anneal : Annealing object
+            Annealing type obje ct containing training schedule information
+                anneal['T'] :           Temperature for det. annealing
+                anneal['N_cut_factor']: 0. no truncation; 1. trunc. according to model
+        model_params : dict
+            dictionary containing model parameters
+                model_params['W']:     (H,D) ndarray
+                    linear dictionary
+                model_params['pi']:    (K,) ndarray
+                    prior parameters
+                model_params['sigma']:  float
+                    standard deviation of noise model
+        my_data : dict
+            data dictionary
+                my_data['y']:     (my_N,D) ndarray
+                    datapoints
+                my_data['candidates']: (my_n,Hprime) 
+                    Candidate H's according to selection func.
 
-        Annealing variables used:
 
-            anneal['T']            Temperature for det. annealing
-            anneal['N_cut_factor'] 0.: no truncation; 1. trunc. according to model
+        Returns
+        -------
+        dict
+            returns information about the approximation posterior
+                dict['logpj']: (my_n,no_states) ndarray
+                    an approximation of the logarithm of the joint distribution
 
         """
         my_N, D =   my_data['y'].shape
@@ -345,12 +530,12 @@ class DSC_ET(CAModel):
 
         ################ Identify Inference Latent vectors##############
         ###########################################################################
-        pre_F[0]  =   self.H * np.log(pi[self.K_0])
+        pre_F[0]  =   self.H * np.log(pi[self._K_0])
         c=0
         for state in range(self.K):
-            if state == self.K_0:
+            if state == self._K_0:
                 continue
-            pre_F[c*H+1:(c+1)*H+1]  =   np.log(pi[state]) + ((self.H-1)*np.log(pi[self.K_0]))
+            pre_F[c*H+1:(c+1)*H+1]  =   np.log(pi[state]) + ((self.H-1)*np.log(pi[self._K_0]))
             c+=1
         pre_F[(self.K-1)*H+1:]  =   l_pis
         for n in range(my_N):
@@ -383,18 +568,41 @@ class DSC_ET(CAModel):
         return { 'logpj': F}#, 'denoms': denoms}
 
     def M_step(self, anneal, model_params, my_suff_stat, my_data):
-        """ LinCA M_step
+        """Discrete Parse Coding M-Step
 
-        my_data variables used:
+        This function is responsible for finding the optimal model parameters given an approximation of the posterior distribution.
+        
+        Parameters
+        ----------
+        anneal : Annealing object
+            Annealing type obje ct containing training schedule information
+                anneal['T'] :           Temperature for det. annealing
+                anneal['N_cut_factor']: 0. no truncation; 1. trunc. according to model
+        model_params : dict
+            dictionary containing model parameters
+                model_params['W']:     (H,D) ndarray
+                    linear dictionary
+                model_params['pi']:    (K,) ndarray
+                    prior parameters
+                model_params['sigma']:  float
+                    standard deviation of noise model
+        my_suff_stat : dict
+            dictionary containing inforamtion about the joint distribution
+                my_suff_stat['logpj']:  (my_N,no_states) ndarray
+                    logarithm of joint of data and latent variable states 
+        my_data : dict
+            data dictionary
+                my_data['y']:     (my_N,D) ndarray
+                    datapoints
+                my_data['candidates']: (my_n,Hprime) 
+                    Candidate H's according to selection func.
 
-            my_data['y']           Datapoints
-            my_data['candidates']         Candidate H's according to selection func.
 
-        Annealing variables used:
-
-            anneal['T']            Temperature for det. annealing
-            anneal['N_cut_factor'] 0.: no truncation; 1. trunc. according to model
-
+        Returns
+        -------
+        dict
+            returns the updated parameters
+        
         """
         comm      = self.comm
         W         = model_params['W'].T
@@ -442,7 +650,7 @@ class DSC_ET(CAModel):
             this_pi = np.zeros_like(pi)       # numerator for pi update (current datapoint)
 
             # Handle hidden states with 0 active causes
-            this_pi[self.K_0] = self.H*pjb[0]
+            this_pi[self._K_0] = self.H*pjb[0]
             this_sigma = pjb[0] * (y**2).sum()
 
             # Handle hidden states with 1 active cause
@@ -450,7 +658,7 @@ class DSC_ET(CAModel):
             c=0
             # import ipdb;ipdb.set_trace()
             for state in range(self.K):
-                if state == self.K_0:
+                if state == self._K_0:
                     continue
                 sspjb = pjb[c*self.H+1:(c+1)*self.H+1]
                 # this_Wp  += np.outer(sspjb,y.T)
@@ -463,7 +671,7 @@ class DSC_ET(CAModel):
                 this_sigma += (sspjb * sqe).sum()
 
                 c+=1
-            this_pi[self.K_0]  += ((self.H-1) * pjb[1:(self.K-1)*self.H+1]).sum()
+            this_pi[self._K_0]  += ((self.H-1) * pjb[1:(self.K-1)*self.H+1]).sum()
             this_Wp         += np.dot(np.outer(y,pjb[1:(self.K-1)*self.H+1]),SSM).T
             # this_Wq_tmp           = np.zeros_like(my_Wq[cand])
             # this_Wq_tmp[:,cand]   = np.dot(pjb[(self.K-1)*self.H+1:] * SM.T,SM)
@@ -518,10 +726,10 @@ class DSC_ET(CAModel):
 
         if 'penalty' in list(self.__dict__.keys()):
             self.penalty
-            if self.penalty>pi_new[self.K_0]:
-                r = (1-self.penalty)/(1-pi_new[self.K_0])
+            if self.penalty>pi_new[self._K_0]:
+                r = (1-self.penalty)/(1-pi_new[self._K_0])
                 pi_new[pi_new!=0] = pi_new[pi_new!=0]*r
-                pi_new[self.K_0] = self.penalty
+                pi_new[self._K_0] = self.penalty
                 pi_new/=pi_new.sum()
 
         # Calculate updated sigma
@@ -575,7 +783,7 @@ class DSC_ET(CAModel):
             if ngp.sum()>self.gamma:
                 continue
             num0 = self.H-ngp.sum() #number of zeros for combinations gp, i.e. H-g_1-g_2-...-g_k
-            abs_array = np.insert(ngp,self.K_0, num0)
+            abs_array = np.insert(ngp,self._K_0, num0)
             if not abs_array.sum() == self.H :
                 raise Exception("wrong number of elements counted")
             cmb = multinom2(abs_array.sum(),abs_array)
@@ -607,7 +815,27 @@ class DSC_ET(CAModel):
 
         return N_use, my_y,candidates,logpj_all
 
-    def get_likelihood(self,D,sigma,A,logpj_all,N):
+    def get_likelihood(self,D,sigma,logpj_all,N):
+        """Data likelihood
+        This functions computes the approximate likelihood of the data from the approximation of the joint 
+        
+        Parameters
+        ----------
+        D : int
+            Number of observed dimensions
+        sigma : float
+            standard deviation of the noise model
+        logpj_all : (my_N,no_states) ndarray
+            approximation of the joint probability of the data and the latent variable states
+        N : int
+            total number of datapoints. Useful in parallel execution
+        
+        Returns
+        -------
+        float
+            the approximate likelihood value
+        
+        """
         comm = self.comm
         L =  - 0.5 * D * np.log(2*np.pi*sigma**2)#-np.log(A)
         Fs = logsumexp(logpj_all,1).sum()
@@ -615,18 +843,22 @@ class DSC_ET(CAModel):
         return L
 
     def standard_init(self, data):
-        """ Standard onitial estimation for model parameters.
-
-        This implementation
-
-        *W* and *sigma*.
-
-
-
-        each *W* raw is set to the average over the data plus WGN of mean zero
-        and var *sigma*/4. *sigma* is set to the variance of the data around
-        the computed mean. *pi* is set to 1./H . Returns a dict with the
+        """Standard onitial estimation for model parameters.
+        
+        This implementation each "W" raw is set to the average over the data plus white Gaussian noise of mean zero
+        and standard deviation "sigma"/4. sigma is set to the variance of the data around
+        the computed mean. "pi" is set to 1./H . Returns a dict with the
         estimated parameter set with entries "W", "pi" and "sigma".
+        
+        Parameters
+        ----------
+        data : dict
+            dataset dictionary. Contains a ndarray of size number of samples x number of features under data['y']
+        
+        Returns
+        -------
+        dict
+            a dictionary containing the model parameters
         """
         comm = self.comm
         H = self.H
@@ -654,7 +886,7 @@ class DSC_ET(CAModel):
         sparsity = 1. - (1./H) 
         pi_init = np.random.rand(self.K - 1)
         pi_init = (1 - sparsity) * pi_init / pi_init.sum()
-        pi_init = np.insert(pi_init, self.K_0, sparsity)
+        pi_init = np.insert(pi_init, self._K_0, sparsity)
 
         # Create and set Model Parameters, W columns have the same average!
         model_params = {
@@ -670,22 +902,30 @@ class DSC_ET(CAModel):
         """
         Perform inference with the learned model on test data and return the top K configurations with their
         posterior probabilities. 
-        :param anneal: Annealing schedule, e.g., em.anneal 
-        :type  anneal: prosper.em.annealling.Annealing
-        :param model_params: Learned model parameters, e.g., em.lparams 
-        :type  model_params: dict        
-        :param test_data: The test data stored in field 'y'. Candidates stored in 'candidates' (optional).
-        :type  test_data: dict
-        :param topK: The number of returned configurations 
-        :type  topK: int
-        :param logprob: Return probability or log probability
-        :type  logprob: boolean
-        :param adaptive: Adjust Hprime, gamma to be greater than the number of active units in the MAP state
-        :type adaptive: boolean
-        :param Hprime_max: Upper limit for Hprime adjustment 
-        :type Hprime_max: int
-        :param gamma_max: Upper limit for gamma adjustment 
-        :type gamma_max: int
+        
+        Parameters
+        ----------
+        anneal : Annealing object
+            annealing information
+        model_params : dict
+            dictionary with model parameters
+        test_data : dict
+            data dictionary. The data in this case are ndarray under the key 'y'.
+        topK : int, optional
+            the number of most probable latent variable states to be returned
+        logprob : bool, optional
+            the probabilities of the most probable latent variable states
+        adaptive : bool, optional
+            if set to True it will run inference again for datapoints with gamma active latent variables in the top state using setting gamma=gamma+1 and Hprime=Hprime+1 
+        Hprime_max : None, optional
+            if adaptive is True it will stop Hprime from increasing above this integer. None defaults to H.
+        gamma_max : None, optional
+            if adaptive is True it will stop gamma from increasing above this integer. None defaults to H.
+        
+        Returns
+        -------
+        dict
+            dictionary with posterior information
         """
 
         assert 'y' in test_data, "Key 'y' in test_data dict not defined."
