@@ -1,6 +1,6 @@
-
+************
 Introduction
-============
+************
 
 This package provides a simple Python framework to implement Expectation
 Maxmimization (EM) based massive parallel machine leraning algorithms.
