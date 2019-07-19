@@ -11,7 +11,7 @@ Welcome to ProSper's documentation!
 Contents:
 
 .. toctree:: 
-    :maxdepth: 3
+    :maxdepth: 4
 
     intro.rst
     em.rst
