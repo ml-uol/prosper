@@ -308,7 +308,8 @@ class DSC_ET(CAModel):
         Parameters
         ----------
         anneal : Annealing object
-            Description
+            Annealing type object containing training schedule information
+                anneal['partial'] :           fraction of the data to return
         my_data : dict
             dictionary of the dataset
                 my_data['y']: (my_N, D) ndarray
@@ -316,8 +317,11 @@ class DSC_ET(CAModel):
         
         Returns
         -------
-        TYPE
-            Description
+        dict
+            my_data: dict
+            dictionary of the dataset
+                my_data['y']: (my_N*anneal['partial'], D) ndarray
+                    the datapoints
         """
         partial = anneal['partial']
 
@@ -416,16 +420,30 @@ class DSC_ET(CAModel):
         
         Parameters
         ----------
-        model_params : TYPE
-            Description
-        anneal : TYPE
-            Description
-        
+        model_params : dict
+            dictionary containing model parameters
+                model_params['W']:     (H,D) ndarray
+                    linear dictionary
+                model_params['pi']:    (K,) ndarray
+                    prior parameters
+                model_params['sigma']:  float
+                    standard deviation of noise model
+        anneal : Annealing object
+            Annealing type object containing training schedule information
+                anneal['W_noise'] :           standard deviation of noise to be added to the dictionary
+                anneal['pi_noise']:           standard deviation of noise to be added to the prior
+                anneal['sigma_noise']:        standard deviation of noise to be added to the standard deviation of the noise model
         Returns
         -------
-        TYPE
-            Description
-        
+        dict
+            model_params : dict
+                dictionary containing model parameters
+                    model_params['W']:     (H,D) ndarray
+                        linear dictionary
+                    model_params['pi']:    (K,) ndarray
+                        prior parameters
+                    model_params['sigma']:  float
+                        standard deviation of noise model
         """
         #H, D = self.H, self.D
         normal = np.random.normal
@@ -761,11 +779,15 @@ class DSC_ET(CAModel):
         return respons
 
     def free_energy(self, model_params, my_data):
-
+        """
+        Deprecated
+        """
         return 0.0
 
     def gain(self, old_parameters, new_parameters):
-
+        """
+        Deprecated
+        """
         return 0.0
 
     def get_scaling_factors(self,pi):
