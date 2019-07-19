@@ -3,11 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. image:: _static/prosper_logo_square_color.png
+
 ***********************************
 Welcome to ProSper's documentation!
 ***********************************
 
-.. image:: _static/prosper_logo_square_color.png
 
 Contents:
 
