@@ -318,10 +318,9 @@ class DSC_ET(CAModel):
         Returns
         -------
         dict
-            my_data: dict
             dictionary of the dataset
                 my_data['y']: (my_N*anneal['partial'], D) ndarray
-                    the datapoints
+                    The updated datapoints
         """
         partial = anneal['partial']
 
@@ -515,7 +514,6 @@ class DSC_ET(CAModel):
                     datapoints
                 my_data['candidates']: (my_n,Hprime) 
                     Candidate H's according to selection func.
-
 
         Returns
         -------
@@ -938,7 +936,8 @@ class DSC_ET(CAModel):
         logprob : bool, optional
             the probabilities of the most probable latent variable states
         adaptive : bool, optional
-            if set to True it will run inference again for datapoints with gamma active latent variables in the top state using setting gamma=gamma+1 and Hprime=Hprime+1 
+            if set to True it will run inference again for datapoints with gamma active 
+            latent variables in the top state using setting gamma=gamma+1 and Hprime=Hprime+1 
         Hprime_max : None, optional
             if adaptive is True it will stop Hprime from increasing above this integer. None defaults to H.
         gamma_max : None, optional
@@ -947,7 +946,7 @@ class DSC_ET(CAModel):
         Returns
         -------
         dict
-            dictionary with posterior information
+            a dictionary with posterior information
         """
 
         assert 'y' in test_data, "Key 'y' in test_data dict not defined."
