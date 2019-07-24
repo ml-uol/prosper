@@ -19,7 +19,7 @@ from prosper.em import Model
 
 def generate_state_matrix(Hprime, gamma, H, states):
     """Ternary state space.
-
+    
     :param Hprime: Vector length
     :type Hprime: int
     :param gamma: Maximum number of ones
@@ -28,7 +28,23 @@ def generate_state_matrix(Hprime, gamma, H, states):
     :type H: int
     :param states: Ternary states
     :type states: np.array
-
+    
+    Parameters
+    ----------
+    Hprime : int
+        Truncated approximation parameter.
+    gamma : int
+        Truncated approximation parameter
+    H : int
+        number of latent variable dimensions
+    states : (K,) ndarray
+        the possible values of the latent dimensions 
+    
+    Returns
+    -------
+    (no_states, Hprime) ndarray
+        latent variable states
+    
     """
 
     l=len(states)
@@ -61,11 +77,31 @@ def generate_state_matrix(Hprime, gamma, H, states):
 
 
 class TSC_ET(CAModel):
+    """
+    Attributes
+    ----------
+    D : int
+        Observerd dimensions
+    gamma : int
+        "Hard sparseness" approximation parameters
+    H : int
+        latent variable dimensions
+    Hprime : int
+        approximation parameter for most likely latent variables
+    noise_policy : dict
+        dictionary with information on noise added to parameters during training.
+        The keys are parameter names and the values are 3-tuples with minimum, and maximum
+        values after the noise is added. The third value is a binary flag that returns the 
+        absolute value of the parameter if set True
+    to_learn : list
+        list of strings. The strings are the keys to the parameter dictionary that are optimized by the EM algorithm
+    
+    """
     @tracing.traced
-    def __init__(self, D, H, Hprime, gamma,states=np.array([-1.,0.,1.]), to_learn=['W', 'pi', 'sigma'], comm=MPI.COMM_WORLD):
+    def __init__(self, D, H, Hprime, gamma, to_learn=['W', 'pi', 'sigma'], comm=MPI.COMM_WORLD):
         Model.__init__(self, comm)
         self.to_learn = to_learn
-        self.states=states
+        self.states=np.array([-1.,0.,1.])
         # Model meta-parameters
         self.gamma=gamma
         self.D = D
@@ -87,6 +123,18 @@ class TSC_ET(CAModel):
         Return a new data-dictionary which has been annotated with
         a data['candidates'] dataset. A set of self.Hprime candidates
         will be selected.
+        
+        Parameters
+        ----------
+        model_params : TYPE
+            Description
+        data : TYPE
+            Description
+        
+        Returns
+        -------
+        TYPE
+            Description
         """
         my_N, D   = data['y'].shape
         H         = self.H
@@ -160,18 +208,40 @@ class TSC_ET(CAModel):
 
     #@tracing.traced
     def E_step(self, anneal, model_params, my_data):
-        """ TSC E_step
+        """E step for Teranary Sparse Coding
+        Identifies approximate posterior information for Ternary Sparse Coding
+        
+        Parameters
+        ----------
+        anneal : Annealing object
+            contains information related to annealing
+                anneal['T']: scalar
+                    Temperature for det. annealing
+                anneal['N_cut_factor']: scalar
+                    0.: no truncation; 1. trunc. according to model
 
-        my_data variables used:
+        model_params : dict
+            dictionary of parameters
+                model_params['W']: ndarray
+                    dictionary
+                model_params['sigma']: float
+                    standard deviation of gaussian noise
+                model_params['pi']: float
+                    prior parameter
+        my_data : dict
+            datapoints dictionary
+                my_data['y']: ndarray
+                    Datapoints
+                my_data['can']: ndarray
+                    Candidate H's according to selection func.
 
-            my_data['y']           Datapoints
-            my_data['can']         Candidate H's according to selection func.
-
-        Annealing variables used:
-
-            anneal['T']            Temperature for det. annealing
-            anneal['N_cut_factor'] 0.: no truncation; 1. trunc. according to model
-
+        
+        Returns
+        -------
+        dict
+            dict['logpj']
+                Approximate joint of datapoints and latent variable states
+        
         """
         my_N, D =   my_data['y'].shape
         SM      =   self.state_matrix
@@ -220,19 +290,35 @@ class TSC_ET(CAModel):
 
     #@tracing.traced
     def M_step(self, anneal, model_params, my_suff_stat, my_data):
-        """ TSC M_step
-
-        my_data variables used:
-            
-            my_data['y']           Datapoints
-            my_data['candidates']         Candidate H's according to selection func.
-
-        Annealing variables used:
-
-            anneal['T']            Temperature for det. annealing
-            anneal['N_cut_factor'] 0.: no truncation; 1. trunc. according to model
-
-        """        
+        """TSC M_step
+                
+                my_data variables used:
+                
+                    my_data['y']           Datapoints
+                    my_data['candidates']         Candidate H's according to selection func.
+                
+                Annealing variables used
+                ------------------------
+                anneal['T']            Temperature for det. annealing
+                anneal['N_cut_factor'] 0.: no truncation; 1. trunc. according to model
+                
+                Parameters
+                ----------
+                anneal : TYPE
+                    Description
+                model_params : TYPE
+                    Description
+                my_suff_stat : TYPE
+                    Description
+                my_data : TYPE
+                    Description
+                
+                Returns
+                -------
+                TYPE
+                    Description
+                
+                """        
         comm      = self.comm
         H         = self.H
         gamma     = self.gamma
@@ -400,6 +486,32 @@ class TSC_ET(CAModel):
         :type Hprime_max: int
         :param gamma_max: Upper limit for gamma adjustment 
         :type gamma_max: int
+        
+        Parameters
+        ----------
+        anneal : TYPE
+            Description
+        model_params : TYPE
+            Description
+        test_data : TYPE
+            Description
+        topK : int, optional
+            Description
+        logprob : bool, optional
+            Description
+        abs_marginal : bool, optional
+            Description
+        adaptive : bool, optional
+            Description
+        Hprime_max : None, optional
+            Description
+        gamma_max : None, optional
+            Description
+        
+        Returns
+        -------
+        TYPE
+            Description
         """
 
         assert 'y' in test_data, "Key 'y' in test_data dict not defined."
