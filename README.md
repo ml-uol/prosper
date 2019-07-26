@@ -1,7 +1,7 @@
 <img align="center" width="240" height="240" src="https://github.com/ml-uol/prosper/raw/master/docs/_static/prosper_logo_square_color.png">
 
 [![Build Status](https://api.shippable.com/projects/557c833cedd7f2c05214da81/badge?branchName=master)](https://app.shippable.com/projects/557c833cedd7f2c05214da81/builds/master)
-[![Documentation](https://readthedocs.org/projects/parallel-em/badge/?version=latest)](http://parallel-em.readthedocs.org/en/latest/)
+[![Documentation Status](https://readthedocs.org/projects/prosper/badge/?version=latest)](https://prosper.readthedocs.io/en/latest/?badge=latest)
 
 Introduction
 ============
@@ -50,7 +50,7 @@ Installation
 To install the library run:
 
 ```
-  $ git clone git@github.com:mlold/prosper.git
+  $ git clone https://github.com/ml-uol/prosper.git
   $ cd prosper
   $ python setup.py install
 ```
