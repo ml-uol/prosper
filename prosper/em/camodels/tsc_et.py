@@ -19,15 +19,7 @@ from prosper.em import Model
 
 def generate_state_matrix(Hprime, gamma, H, states):
     """Ternary state space.
-    
-    :param Hprime: Vector length
-    :type Hprime: int
-    :param gamma: Maximum number of ones
-    :type gamma: int
-    :param H: Dimensionality of latent space
-    :type H: int
-    :param states: Ternary states
-    :type states: np.array
+        Generates the state matrix
     
     Parameters
     ----------
@@ -42,8 +34,17 @@ def generate_state_matrix(Hprime, gamma, H, states):
     
     Returns
     -------
-    (no_states, Hprime) ndarray
-        latent variable states
+    tuple
+        res
+            res[0] (2*H, H) ndarray
+                latent variable states with singleton states
+            res[1] (no_states, Hprime) ndarray
+                latent variable states with more than one non-zero dimensions
+            no_states int
+                the number of latent variable states considered
+            state_abs (no_states,) ndarray
+                the nubmer of non-zero elements in a latent variable state
+
     
     """
 
@@ -126,15 +127,27 @@ class TSC_ET(CAModel):
         
         Parameters
         ----------
-        model_params : TYPE
-            Description
-        data : TYPE
-            Description
+        model_params : dict
+            dictionary containing model parameters
+                model_params['W']:     (H,D) ndarray
+                    linear dictionary
+                model_params['pi']:    (K,) ndarray
+                    prior parameters
+                model_params['sigma']:  float
+                    standard deviation of noise model
+        data : dict
+            dataset dictionary
+                data['y']: (my_n,D) ndarray
+                    datapoints
         
         Returns
         -------
-        TYPE
-            Description
+        dict
+            dataset dictionary
+                data['y']: (my_n,D) ndarray
+                    datapoints
+                data['candidates']: (my_n,) ndarray
+                    indices of the best explained datapoints
         """
         my_N, D   = data['y'].shape
         H         = self.H
@@ -180,6 +193,37 @@ class TSC_ET(CAModel):
         
     @tracing.traced
     def generate_data(self, model_params, my_N):
+        """
+        Parameters
+        ----------
+        model_params : dict
+            model parameters
+                model_params['W']:     (H,D) ndarray
+                    linear dictionary
+                model_params['pi']:    (K,) ndarray
+                    prior parameters
+                model_params['sigma']:  float
+                    standard deviation of noise model
+        my_N : int
+            number of datapoints for this process
+        noise_on : bool, optional
+            flag to control deterministic/stochastic generation. If True gaussian noise with standard deviation model_params['sigma'] is added to the data
+        gs : (my_N, H), optional
+            ground truth latent variables. This option is used for generating artificial data with particular latent variables. 
+            Defaults to randomly sampled latent variables from the prior
+        gp : (my_N, H), optional
+            ground truth posterior. This option is used for generating data that have a particular true posterior distribution.
+            Defaults to randomly sampled latent variables from the prior
+        
+        Returns
+        -------
+        dict
+            returns generated data
+                dict['y']: (my_N, D) ndarray
+                    generated data
+                dict['s']: (my_N, H) ndarray
+                    latent variable states that generated the data
+        """
         D = self.D
         H = self.H
         pi = model_params['pi']
@@ -290,35 +334,47 @@ class TSC_ET(CAModel):
 
     #@tracing.traced
     def M_step(self, anneal, model_params, my_suff_stat, my_data):
-        """TSC M_step
-                
-                my_data variables used:
-                
-                    my_data['y']           Datapoints
-                    my_data['candidates']         Candidate H's according to selection func.
-                
-                Annealing variables used
-                ------------------------
-                anneal['T']            Temperature for det. annealing
-                anneal['N_cut_factor'] 0.: no truncation; 1. trunc. according to model
-                
-                Parameters
-                ----------
-                anneal : TYPE
-                    Description
-                model_params : TYPE
-                    Description
-                my_suff_stat : TYPE
-                    Description
-                my_data : TYPE
-                    Description
-                
-                Returns
-                -------
-                TYPE
-                    Description
-                
-                """        
+        """Ternary Sparse Coding M-Step
+
+        This function is responsible for finding the optimal model parameters given an approximation of the posterior distribution.
+        
+        Parameters
+        ----------
+        anneal : Annealing object
+            Annealing type obje ct containing training schedule information
+                anneal['T'] :           Temperature for det. annealing
+                anneal['N_cut_factor']: 0. no truncation; 1. trunc. according to model
+        model_params : dict
+            dictionary containing model parameters
+                model_params['W']:     (H,D) ndarray
+                    linear dictionary
+                model_params['pi']:    (K,) ndarray
+                    prior parameters
+                model_params['sigma']:  float
+                    standard deviation of noise model
+        my_suff_stat : dict
+            dictionary containing inforamtion about the joint distribution
+                my_suff_stat['logpj']:  (my_N,no_states) ndarray
+                    logarithm of joint of data and latent variable states 
+        my_data : dict
+            data dictionary
+                my_data['y']:     (my_N,D) ndarray
+                    datapoints
+                my_data['candidates']: (my_n,Hprime) 
+                    Candidate H's according to selection func.
+
+        Returns
+        -------
+        dict
+            dictionary containing updated model parameters
+                dict['W']:     (H,D) ndarray
+                    linear dictionary
+                dict['pi']:    (K,) ndarray
+                    prior parameters
+                dict['sigma']:  float
+                    standard deviation of noise model
+        
+        """ 
         comm      = self.comm
         H         = self.H
         gamma     = self.gamma
@@ -467,51 +523,45 @@ class TSC_ET(CAModel):
     def inference(self, anneal, model_params, test_data, topK=10, logprob=False, abs_marginal=True,
         adaptive=True, Hprime_max=None, gamma_max=None):
         """
-        Perform inference with the learned model on test data and return the top K configurations with their posterior probabilities. 
-        :param anneal: Annealing schedule, e.g., em.anneal 
-        :type  anneal: prosper.em.annealling.Annealing
-        :param model_params: Learned model parameters, e.g., em.lparams 
-        :type  model_params: dict        
-        :param test_data: The test data stored in field 'y'. Candidates stored in 'candidates' (optional).
-        :type  test_data: dict
-        :param topK: The number of returned configurations 
-        :type  topK: int
-        :param logprob: Return probability or log probability
-        :type  logprob: boolean        
-        :param abs_marginal: Return marginal of states at absolut value
-        :type abs_marginal: boolean
-        :param adaptive: Adjust Hprime, gamma to be greater than the number of active units in the MAP state
-        :type adaptive: boolean
-        :param Hprime_max: Upper limit for Hprime adjustment 
-        :type Hprime_max: int
-        :param gamma_max: Upper limit for gamma adjustment 
-        :type gamma_max: int
+        Perform inference with the learned model on test data and return the top K configurations with their
+        posterior probabilities. 
         
         Parameters
         ----------
-        anneal : TYPE
-            Description
-        model_params : TYPE
-            Description
-        test_data : TYPE
-            Description
+        anneal : Annealing object
+            annealing information
+        model_params : dict
+            dictionary with model parameters
+        test_data : dict
+            data dictionary. The data in this case are ndarray under the key 'y'.
         topK : int, optional
-            Description
+            the number of most probable latent variable states to be returned
         logprob : bool, optional
-            Description
-        abs_marginal : bool, optional
-            Description
+            the probabilities of the most probable latent variable states
         adaptive : bool, optional
-            Description
+            if set to True it will run inference again for datapoints with gamma active 
+            latent variables in the top state using setting gamma=gamma+1 and Hprime=Hprime+1 
         Hprime_max : None, optional
-            Description
+            if adaptive is True it will stop Hprime from increasing above this integer. None defaults to H.
         gamma_max : None, optional
-            Description
+            if adaptive is True it will stop gamma from increasing above this integer. None defaults to H.
         
         Returns
         -------
-        TYPE
-            Description
+        dict
+            a dictionary with posterior information
+                dict['s']: (batchsize, topK, H) ndarray
+                    the topK most probable vectors
+                dict['m']: (batchsize, H) ndarray
+                    latent variable marginal distribution
+                dict['am']: (batchsize, H) ndarray
+                    absolote latent variable marginal distribution
+                dict['p']: (batchsize, topK) ndarray
+                    probabilities of topK latent variable states
+                dict['gamma']: int
+                    sparseness approximation parameter
+                dict['Hprime']: int
+                    truncation approximation parameter
         """
 
         assert 'y' in test_data, "Key 'y' in test_data dict not defined."

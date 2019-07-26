@@ -264,7 +264,7 @@ class DSC_ET(CAModel):
             returns generated data
                 dict['y']: (my_N, D) ndarray
                     generated data
-                dict['y']: (my_N, H) ndarray
+                dict['s']: (my_N, H) ndarray
                     latent variable states that generated the data
         """
         D = self.D
@@ -584,7 +584,7 @@ class DSC_ET(CAModel):
         return { 'logpj': F}#, 'denoms': denoms}
 
     def M_step(self, anneal, model_params, my_suff_stat, my_data):
-        """Discrete Parse Coding M-Step
+        """Discrete Sparse Coding M-Step
 
         This function is responsible for finding the optimal model parameters given an approximation of the posterior distribution.
         
@@ -612,12 +612,17 @@ class DSC_ET(CAModel):
                     datapoints
                 my_data['candidates']: (my_n,Hprime) 
                     Candidate H's according to selection func.
-
-
+                    
         Returns
         -------
         dict
-            returns the updated parameters
+            dictionary containing updated model parameters
+                dict['W']:     (H,D) ndarray
+                    linear dictionary
+                dict['pi']:    (K,) ndarray
+                    prior parameters
+                dict['sigma']:  float
+                    standard deviation of noise model
         
         """
         comm      = self.comm

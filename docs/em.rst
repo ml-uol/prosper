@@ -3,7 +3,7 @@
 ***************************************
 Expectation Maximization infrastructure
 ***************************************
-
+The machine learning algorithms distributed with ProSper are based on latent variable probabilistic data models and are trained with variational Expectation Maximization (EM) learning algorithm. The source code is therefore organized under an EM module.
 
 Expectation Maximization Algorithm
 ==================================
