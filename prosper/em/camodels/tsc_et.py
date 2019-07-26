@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+#
+#  Lincense: Academic Free License (AFL) v3.0
+#
 
 
 
@@ -44,7 +47,7 @@ def generate_state_matrix(Hprime, gamma, H, states):
                 the number of latent variable states considered
             state_abs (no_states,) ndarray
                 the nubmer of non-zero elements in a latent variable state
-
+    
     
     """
 
@@ -60,7 +63,7 @@ def generate_state_matrix(Hprime, gamma, H, states):
         temp=np.eye(H,dtype=np.int8)*states[i]
         ss=np.concatenate((ss,temp))
         
-    fullSM=ss[np.sum(np.abs(ss),1)==1]                                # For ternary 2*HxH
+    single_state_matrix=ss[np.sum(np.abs(ss),1)==1]                                # For ternary 2*HxH
     s=np.empty((l**Hprime,Hprime),dtype=np.int8)
     c=0
     ar=np.array(states)
@@ -74,29 +77,46 @@ def generate_state_matrix(Hprime, gamma, H, states):
     state_matrix = s[np.sum(np.abs(s),axis=1)<=gamma]
     no_states=s.shape[0]        
 
-    return fullSM, state_matrix, no_states, states_abs
+    return single_state_matrix, state_matrix, no_states, states_abs
 
 
 class TSC_ET(CAModel):
-    """
+    """Ternary Sparse Coding
+
+    Implements learning and inference of a Ternary Sparse coding model under a variational approximation
+
     Attributes
     ----------
+    comm : MPI communicator
     D : int
-        Observerd dimensions
+        number of features
     gamma : int
-        "Hard sparseness" approximation parameters
+        approximation parameter for maximum number of non-zero states
     H : int
-        latent variable dimensions
+        number of latent variables
     Hprime : int
-        approximation parameter for most likely latent variables
-    noise_policy : dict
-        dictionary with information on noise added to parameters during training.
-        The keys are parameter names and the values are 3-tuples with minimum, and maximum
-        values after the noise is added. The third value is a binary flag that returns the 
-        absolute value of the parameter if set True
+        approximation parameter for latent space trunctation
+    K : int
+        number of different values the latent variables can take
+    no_states : (..., Hprime) ndarray  
+        number of different states of latent variables except singleton states and zero state
+    single_state_matrix : ((K-1)*H, H) ndarray
+        matrix that holds all possible singleton states
+    state_abs : (no_states, ) ndarray
+        number of non-zero elements in the rows of the state_matrix
+    state_matrix : (no_states, Hprime) ndarray
+        latent variable states taken into account during the em algorithm
+    states : (K,) ndarray
+        the differnt values that a latent variable can take must include 0 and one more integer
     to_learn : list
-        list of strings. The strings are the keys to the parameter dictionary that are optimized by the EM algorithm
-    
+        list of strings included in model_params.keys() that specify which parameters are going to be optimized
+
+    References
+    ----------
+    [1] G. Exarchakis, M. Henniges, J. Eggert, and J. Lücke (2012). Ternary Sparse Coding. International Conference on Latent Variable Analysis and Signal Separation (LVA/ICA), 204-212.
+
+    [2] J. Lücke and J. Eggert (2010). Expectation Truncation and the Benefits of Preselection in Training Generative Models. Journal of Machine Learning Research 11:2855-2900.
+
     """
     @tracing.traced
     def __init__(self, D, H, Hprime, gamma, to_learn=['W', 'pi', 'sigma'], comm=MPI.COMM_WORLD):
@@ -108,7 +128,7 @@ class TSC_ET(CAModel):
         self.D = D
         self.H = H
         self.Hprime=Hprime
-        self.fullSM, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(Hprime, gamma, H, states)
+        self.single_state_matrix, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(Hprime, gamma, H, states)
 
         # Noise Policy
         tol = 1e-5
@@ -151,7 +171,7 @@ class TSC_ET(CAModel):
         """
         my_N, D   = data['y'].shape
         H         = self.H
-        SM        = self.fullSM
+        SM        = self.single_state_matrix
         l1,l2     = SM.shape                                          #H=self.H
         
         candidates= np.zeros((my_N, self.Hprime), dtype=np.int)
@@ -206,14 +226,6 @@ class TSC_ET(CAModel):
                     standard deviation of noise model
         my_N : int
             number of datapoints for this process
-        noise_on : bool, optional
-            flag to control deterministic/stochastic generation. If True gaussian noise with standard deviation model_params['sigma'] is added to the data
-        gs : (my_N, H), optional
-            ground truth latent variables. This option is used for generating artificial data with particular latent variables. 
-            Defaults to randomly sampled latent variables from the prior
-        gp : (my_N, H), optional
-            ground truth posterior. This option is used for generating data that have a particular true posterior distribution.
-            Defaults to randomly sampled latent variables from the prior
         
         Returns
         -------
@@ -223,6 +235,17 @@ class TSC_ET(CAModel):
                     generated data
                 dict['s']: (my_N, H) ndarray
                     latent variable states that generated the data
+        
+        Deleted Parameters
+        ------------------
+        noise_on : bool, optional
+            flag to control deterministic/stochastic generation. If True gaussian noise with standard deviation model_params['sigma'] is added to the data
+        gs : (my_N, H), optional
+            ground truth latent variables. This option is used for generating artificial data with particular latent variables. 
+            Defaults to randomly sampled latent variables from the prior
+        gp : (my_N, H), optional
+            ground truth posterior. This option is used for generating data that have a particular true posterior distribution.
+            Defaults to randomly sampled latent variables from the prior
         """
         D = self.D
         H = self.H
@@ -263,7 +286,7 @@ class TSC_ET(CAModel):
                     Temperature for det. annealing
                 anneal['N_cut_factor']: scalar
                     0.: no truncation; 1. trunc. according to model
-
+        
         model_params : dict
             dictionary of parameters
                 model_params['W']: ndarray
@@ -278,7 +301,7 @@ class TSC_ET(CAModel):
                     Datapoints
                 my_data['can']: ndarray
                     Candidate H's according to selection func.
-
+        
         
         Returns
         -------
@@ -335,46 +358,46 @@ class TSC_ET(CAModel):
     #@tracing.traced
     def M_step(self, anneal, model_params, my_suff_stat, my_data):
         """Ternary Sparse Coding M-Step
-
-        This function is responsible for finding the optimal model parameters given an approximation of the posterior distribution.
-        
-        Parameters
-        ----------
-        anneal : Annealing object
-            Annealing type obje ct containing training schedule information
-                anneal['T'] :           Temperature for det. annealing
-                anneal['N_cut_factor']: 0. no truncation; 1. trunc. according to model
-        model_params : dict
-            dictionary containing model parameters
-                model_params['W']:     (H,D) ndarray
-                    linear dictionary
-                model_params['pi']:    (K,) ndarray
-                    prior parameters
-                model_params['sigma']:  float
-                    standard deviation of noise model
-        my_suff_stat : dict
-            dictionary containing inforamtion about the joint distribution
-                my_suff_stat['logpj']:  (my_N,no_states) ndarray
-                    logarithm of joint of data and latent variable states 
-        my_data : dict
-            data dictionary
-                my_data['y']:     (my_N,D) ndarray
-                    datapoints
-                my_data['candidates']: (my_n,Hprime) 
-                    Candidate H's according to selection func.
-
-        Returns
-        -------
-        dict
-            dictionary containing updated model parameters
-                dict['W']:     (H,D) ndarray
-                    linear dictionary
-                dict['pi']:    (K,) ndarray
-                    prior parameters
-                dict['sigma']:  float
-                    standard deviation of noise model
-        
-        """ 
+         
+         This function is responsible for finding the optimal model parameters given an approximation of the posterior distribution.
+         
+         Parameters
+         ----------
+         anneal : Annealing object
+             Annealing type obje ct containing training schedule information
+                 anneal['T'] :           Temperature for det. annealing
+                 anneal['N_cut_factor']: 0. no truncation; 1. trunc. according to model
+         model_params : dict
+             dictionary containing model parameters
+                 model_params['W']:     (H,D) ndarray
+                     linear dictionary
+                 model_params['pi']:    (K,) ndarray
+                     prior parameters
+                 model_params['sigma']:  float
+                     standard deviation of noise model
+         my_suff_stat : dict
+             dictionary containing inforamtion about the joint distribution
+                 my_suff_stat['logpj']:  (my_N,no_states) ndarray
+                     logarithm of joint of data and latent variable states 
+         my_data : dict
+             data dictionary
+                 my_data['y']:     (my_N,D) ndarray
+                     datapoints
+                 my_data['candidates']: (my_n,Hprime) 
+                     Candidate H's according to selection func.
+         
+         Returns
+         -------
+         dict
+             dictionary containing updated model parameters
+                 dict['W']:     (H,D) ndarray
+                     linear dictionary
+                 dict['pi']:    (K,) ndarray
+                     prior parameters
+                 dict['sigma']:  float
+                     standard deviation of noise model
+         
+         """ 
         comm      = self.comm
         H         = self.H
         gamma     = self.gamma
@@ -538,6 +561,8 @@ class TSC_ET(CAModel):
             the number of most probable latent variable states to be returned
         logprob : bool, optional
             the probabilities of the most probable latent variable states
+        abs_marginal : bool, optional
+            Description
         adaptive : bool, optional
             if set to True it will run inference again for datapoints with gamma active 
             latent variables in the top state using setting gamma=gamma+1 and Hprime=Hprime+1 
@@ -641,7 +666,7 @@ class TSC_ET(CAModel):
                 self.gamma+=1
             
             print("Rank %i: Updating state matrix and running again." % comm.rank)
-            self.fullSM, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(self.Hprime, self.gamma, self.H, self.states)
+            self.single_state_matrix, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(self.Hprime, self.gamma, self.H, self.states)
 
         if logprob:
             res['m'] = np.log(res['m'])
@@ -650,6 +675,6 @@ class TSC_ET(CAModel):
         comm.Barrier()
 
         self.Hprime, self.gamma = Hprime_start, gamma_start
-        self.fullSM, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(self.Hprime, self.gamma, self.H, self.states)
+        self.single_state_matrix, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(self.Hprime, self.gamma, self.H, self.states)
 
         return res
