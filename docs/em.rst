@@ -1,5 +1,3 @@
-.. image:: _static/prosper_logo_square_color.png
-
 ***************************************
 Expectation Maximization infrastructure
 ***************************************
