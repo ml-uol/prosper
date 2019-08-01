@@ -3,16 +3,21 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. image:: _static/prosper_logo_square_color.png
+
+***********************************
 Welcome to ProSper's documentation!
-=================================
+***********************************
+
 
 Contents:
 
-.. toctree::
-    :maxdepth: 2
+.. toctree:: 
+    :maxdepth: 4
 
-    intro
-    em
+    intro.rst
+    em.rst
+    tutorial.rst
 
 Indices and tables
 ==================

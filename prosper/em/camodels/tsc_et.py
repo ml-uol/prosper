@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+#
+#  Lincense: Academic Free License (AFL) v3.0
+#
 
 
 
@@ -19,16 +22,33 @@ from prosper.em import Model
 
 def generate_state_matrix(Hprime, gamma, H, states):
     """Ternary state space.
-
-    :param Hprime: Vector length
-    :type Hprime: int
-    :param gamma: Maximum number of ones
-    :type gamma: int
-    :param H: Dimensionality of latent space
-    :type H: int
-    :param states: Ternary states
-    :type states: np.array
-
+        Generates the state matrix
+    
+    Parameters
+    ----------
+    Hprime : int
+        Truncated approximation parameter.
+    gamma : int
+        Truncated approximation parameter
+    H : int
+        number of latent variable dimensions
+    states : (K,) ndarray
+        the possible values of the latent dimensions 
+    
+    Returns
+    -------
+    tuple
+        res
+            res[0] (2*H, H) ndarray
+                latent variable states with singleton states
+            res[1] (no_states, Hprime) ndarray
+                latent variable states with more than one non-zero dimensions
+            no_states int
+                the number of latent variable states considered
+            state_abs (no_states,) ndarray
+                the nubmer of non-zero elements in a latent variable state
+    
+    
     """
 
     l=len(states)
@@ -43,7 +63,7 @@ def generate_state_matrix(Hprime, gamma, H, states):
         temp=np.eye(H,dtype=np.int8)*states[i]
         ss=np.concatenate((ss,temp))
         
-    fullSM=ss[np.sum(np.abs(ss),1)==1]                                # For ternary 2*HxH
+    single_state_matrix=ss[np.sum(np.abs(ss),1)==1]                                # For ternary 2*HxH
     s=np.empty((l**Hprime,Hprime),dtype=np.int8)
     c=0
     ar=np.array(states)
@@ -57,21 +77,58 @@ def generate_state_matrix(Hprime, gamma, H, states):
     state_matrix = s[np.sum(np.abs(s),axis=1)<=gamma]
     no_states=s.shape[0]        
 
-    return fullSM, state_matrix, no_states, states_abs
+    return single_state_matrix, state_matrix, no_states, states_abs
 
 
-class Ternary_ET(CAModel):
+class TSC_ET(CAModel):
+    """Ternary Sparse Coding
+
+    Implements learning and inference of a Ternary Sparse coding model under a variational approximation
+
+    Attributes
+    ----------
+    comm : MPI communicator
+    D : int
+        number of features
+    gamma : int
+        approximation parameter for maximum number of non-zero states
+    H : int
+        number of latent variables
+    Hprime : int
+        approximation parameter for latent space trunctation
+    K : int
+        number of different values the latent variables can take
+    no_states : (..., Hprime) ndarray  
+        number of different states of latent variables except singleton states and zero state
+    single_state_matrix : ((K-1)*H, H) ndarray
+        matrix that holds all possible singleton states
+    state_abs : (no_states, ) ndarray
+        number of non-zero elements in the rows of the state_matrix
+    state_matrix : (no_states, Hprime) ndarray
+        latent variable states taken into account during the em algorithm
+    states : (K,) ndarray
+        the differnt values that a latent variable can take must include 0 and one more integer
+    to_learn : list
+        list of strings included in model_params.keys() that specify which parameters are going to be optimized
+
+    References
+    ----------
+    [1] G. Exarchakis, M. Henniges, J. Eggert, and J. Lücke (2012). Ternary Sparse Coding. International Conference on Latent Variable Analysis and Signal Separation (LVA/ICA), 204-212.
+
+    [2] J. Lücke and J. Eggert (2010). Expectation Truncation and the Benefits of Preselection in Training Generative Models. Journal of Machine Learning Research 11:2855-2900.
+
+    """
     @tracing.traced
-    def __init__(self, D, H, Hprime, gamma,states=np.array([-1.,0.,1.]), to_learn=['W', 'pi', 'sigma'], comm=MPI.COMM_WORLD):
+    def __init__(self, D, H, Hprime, gamma, to_learn=['W', 'pi', 'sigma'], comm=MPI.COMM_WORLD):
         Model.__init__(self, comm)
         self.to_learn = to_learn
-        self.states=states
+        self.states=np.array([-1.,0.,1.])
         # Model meta-parameters
         self.gamma=gamma
         self.D = D
         self.H = H
         self.Hprime=Hprime
-        self.fullSM, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(Hprime, gamma, H, states)
+        self.single_state_matrix, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(Hprime, gamma, H, states)
 
         # Noise Policy
         tol = 1e-5
@@ -87,10 +144,34 @@ class Ternary_ET(CAModel):
         Return a new data-dictionary which has been annotated with
         a data['candidates'] dataset. A set of self.Hprime candidates
         will be selected.
+        
+        Parameters
+        ----------
+        model_params : dict
+            dictionary containing model parameters
+                model_params['W']:     (H,D) ndarray
+                    linear dictionary
+                model_params['pi']:    (K,) ndarray
+                    prior parameters
+                model_params['sigma']:  float
+                    standard deviation of noise model
+        data : dict
+            dataset dictionary
+                data['y']: (my_n,D) ndarray
+                    datapoints
+        
+        Returns
+        -------
+        dict
+            dataset dictionary
+                data['y']: (my_n,D) ndarray
+                    datapoints
+                data['candidates']: (my_n,) ndarray
+                    indices of the best explained datapoints
         """
         my_N, D   = data['y'].shape
         H         = self.H
-        SM        = self.fullSM
+        SM        = self.single_state_matrix
         l1,l2     = SM.shape                                          #H=self.H
         
         candidates= np.zeros((my_N, self.Hprime), dtype=np.int)
@@ -132,6 +213,40 @@ class Ternary_ET(CAModel):
         
     @tracing.traced
     def generate_data(self, model_params, my_N):
+        """
+        Parameters
+        ----------
+        model_params : dict
+            model parameters
+                model_params['W']:     (H,D) ndarray
+                    linear dictionary
+                model_params['pi']:    (K,) ndarray
+                    prior parameters
+                model_params['sigma']:  float
+                    standard deviation of noise model
+        my_N : int
+            number of datapoints for this process
+        
+        Returns
+        -------
+        dict
+            returns generated data
+                dict['y']: (my_N, D) ndarray
+                    generated data
+                dict['s']: (my_N, H) ndarray
+                    latent variable states that generated the data
+        
+        Deleted Parameters
+        ------------------
+        noise_on : bool, optional
+            flag to control deterministic/stochastic generation. If True gaussian noise with standard deviation model_params['sigma'] is added to the data
+        gs : (my_N, H), optional
+            ground truth latent variables. This option is used for generating artificial data with particular latent variables. 
+            Defaults to randomly sampled latent variables from the prior
+        gp : (my_N, H), optional
+            ground truth posterior. This option is used for generating data that have a particular true posterior distribution.
+            Defaults to randomly sampled latent variables from the prior
+        """
         D = self.D
         H = self.H
         pi = model_params['pi']
@@ -160,18 +275,40 @@ class Ternary_ET(CAModel):
 
     #@tracing.traced
     def E_step(self, anneal, model_params, my_data):
-        """ TSC E_step
-
-        my_data variables used:
-
-            my_data['y']           Datapoints
-            my_data['can']         Candidate H's according to selection func.
-
-        Annealing variables used:
-
-            anneal['T']            Temperature for det. annealing
-            anneal['N_cut_factor'] 0.: no truncation; 1. trunc. according to model
-
+        """E step for Teranary Sparse Coding
+        Identifies approximate posterior information for Ternary Sparse Coding
+        
+        Parameters
+        ----------
+        anneal : Annealing object
+            contains information related to annealing
+                anneal['T']: scalar
+                    Temperature for det. annealing
+                anneal['N_cut_factor']: scalar
+                    0.: no truncation; 1. trunc. according to model
+        
+        model_params : dict
+            dictionary of parameters
+                model_params['W']: ndarray
+                    dictionary
+                model_params['sigma']: float
+                    standard deviation of gaussian noise
+                model_params['pi']: float
+                    prior parameter
+        my_data : dict
+            datapoints dictionary
+                my_data['y']: ndarray
+                    Datapoints
+                my_data['can']: ndarray
+                    Candidate H's according to selection func.
+        
+        
+        Returns
+        -------
+        dict
+            dict['logpj']
+                Approximate joint of datapoints and latent variable states
+        
         """
         my_N, D =   my_data['y'].shape
         SM      =   self.state_matrix
@@ -220,19 +357,47 @@ class Ternary_ET(CAModel):
 
     #@tracing.traced
     def M_step(self, anneal, model_params, my_suff_stat, my_data):
-        """ TSC M_step
-
-        my_data variables used:
-            
-            my_data['y']           Datapoints
-            my_data['candidates']         Candidate H's according to selection func.
-
-        Annealing variables used:
-
-            anneal['T']            Temperature for det. annealing
-            anneal['N_cut_factor'] 0.: no truncation; 1. trunc. according to model
-
-        """        
+        """Ternary Sparse Coding M-Step
+         
+         This function is responsible for finding the optimal model parameters given an approximation of the posterior distribution.
+         
+         Parameters
+         ----------
+         anneal : Annealing object
+             Annealing type obje ct containing training schedule information
+                 anneal['T'] :           Temperature for det. annealing
+                 anneal['N_cut_factor']: 0. no truncation; 1. trunc. according to model
+         model_params : dict
+             dictionary containing model parameters
+                 model_params['W']:     (H,D) ndarray
+                     linear dictionary
+                 model_params['pi']:    (K,) ndarray
+                     prior parameters
+                 model_params['sigma']:  float
+                     standard deviation of noise model
+         my_suff_stat : dict
+             dictionary containing inforamtion about the joint distribution
+                 my_suff_stat['logpj']:  (my_N,no_states) ndarray
+                     logarithm of joint of data and latent variable states 
+         my_data : dict
+             data dictionary
+                 my_data['y']:     (my_N,D) ndarray
+                     datapoints
+                 my_data['candidates']: (my_n,Hprime) 
+                     Candidate H's according to selection func.
+         
+         Returns
+         -------
+         dict
+             dictionary containing updated model parameters
+                 dict['W']:     (H,D) ndarray
+                     linear dictionary
+                 dict['pi']:    (K,) ndarray
+                     prior parameters
+                 dict['sigma']:  float
+                     standard deviation of noise model
+         
+         """ 
         comm      = self.comm
         H         = self.H
         gamma     = self.gamma
@@ -381,25 +546,47 @@ class Ternary_ET(CAModel):
     def inference(self, anneal, model_params, test_data, topK=10, logprob=False, abs_marginal=True,
         adaptive=True, Hprime_max=None, gamma_max=None):
         """
-        Perform inference with the learned model on test data and return the top K configurations with their posterior probabilities. 
-        :param anneal: Annealing schedule, e.g., em.anneal 
-        :type  anneal: prosper.em.annealling.Annealing
-        :param model_params: Learned model parameters, e.g., em.lparams 
-        :type  model_params: dict        
-        :param test_data: The test data stored in field 'y'. Candidates stored in 'candidates' (optional).
-        :type  test_data: dict
-        :param topK: The number of returned configurations 
-        :type  topK: int
-        :param logprob: Return probability or log probability
-        :type  logprob: boolean        
-        :param abs_marginal: Return marginal of states at absolut value
-        :type abs_marginal: boolean
-        :param adaptive: Adjust Hprime, gamma to be greater than the number of active units in the MAP state
-        :type adaptive: boolean
-        :param Hprime_max: Upper limit for Hprime adjustment 
-        :type Hprime_max: int
-        :param gamma_max: Upper limit for gamma adjustment 
-        :type gamma_max: int
+        Perform inference with the learned model on test data and return the top K configurations with their
+        posterior probabilities. 
+        
+        Parameters
+        ----------
+        anneal : Annealing object
+            annealing information
+        model_params : dict
+            dictionary with model parameters
+        test_data : dict
+            data dictionary. The data in this case are ndarray under the key 'y'.
+        topK : int, optional
+            the number of most probable latent variable states to be returned
+        logprob : bool, optional
+            the probabilities of the most probable latent variable states
+        abs_marginal : bool, optional
+            Description
+        adaptive : bool, optional
+            if set to True it will run inference again for datapoints with gamma active 
+            latent variables in the top state using setting gamma=gamma+1 and Hprime=Hprime+1 
+        Hprime_max : None, optional
+            if adaptive is True it will stop Hprime from increasing above this integer. None defaults to H.
+        gamma_max : None, optional
+            if adaptive is True it will stop gamma from increasing above this integer. None defaults to H.
+        
+        Returns
+        -------
+        dict
+            a dictionary with posterior information
+                dict['s']: (batchsize, topK, H) ndarray
+                    the topK most probable vectors
+                dict['m']: (batchsize, H) ndarray
+                    latent variable marginal distribution
+                dict['am']: (batchsize, H) ndarray
+                    absolote latent variable marginal distribution
+                dict['p']: (batchsize, topK) ndarray
+                    probabilities of topK latent variable states
+                dict['gamma']: int
+                    sparseness approximation parameter
+                dict['Hprime']: int
+                    truncation approximation parameter
         """
 
         assert 'y' in test_data, "Key 'y' in test_data dict not defined."
@@ -479,7 +666,7 @@ class Ternary_ET(CAModel):
                 self.gamma+=1
             
             print("Rank %i: Updating state matrix and running again." % comm.rank)
-            self.fullSM, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(self.Hprime, self.gamma, self.H, self.states)
+            self.single_state_matrix, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(self.Hprime, self.gamma, self.H, self.states)
 
         if logprob:
             res['m'] = np.log(res['m'])
@@ -488,6 +675,6 @@ class Ternary_ET(CAModel):
         comm.Barrier()
 
         self.Hprime, self.gamma = Hprime_start, gamma_start
-        self.fullSM, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(self.Hprime, self.gamma, self.H, self.states)
+        self.single_state_matrix, self.state_matrix, self.no_states, self.state_abs = generate_state_matrix(self.Hprime, self.gamma, self.H, self.states)
 
         return res

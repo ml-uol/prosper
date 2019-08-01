@@ -58,27 +58,25 @@ class CAModel(Model):
     """
 
     def __init__(self, D, H, Hprime, gamma, to_learn=['W', 'pi', 'sigma'], comm=MPI.COMM_WORLD):
-        """ Constructor for ET based Sparse Coding models with binary latent variables.
-
-        :param D: Dimension of observed data. 
-        :type  D: int
-        :param H: Number of dictionary elements to learn.
-        :type  H: int
-        :param Hprime: ET approximation parameter: number of latent units to 
-            choose during preselction 
-        :type  Hprime: int
-        :param gamma: maximum number of active latent binary variables. This 
-            parameter should be choosen to be larger than the expected sparseness
-            of the model to be learned.
-        :type  gamma: int
-
-        The set of model parameters of an CAModel derived model typically consist of::
-
-            model_param['W']:  dictionary elements (shape D times H)
-            model_param['pi']: prior activation probability for the observed variables.
-            model_param['sigma']: std-variance of observation noise
-                
-        """
+        """Constructor for ET based Sparse Coding models with binary latent variables.
+        Parameters
+        ----------
+        comm : MPI communicator
+        D : int
+            number of features
+        H : int
+            number of latent variables
+        Hprime : int
+            approximation parameter for latent space trunctation
+        gamma : int
+            approximation parameter for maximum number of non-zero states
+        to_learn : list, optional
+            list of strings included in model_params.keys() that specify which parameters are going to be optimized
+        state_abs : (no_states, ) ndarray
+            number of non-zero elements in the rows of the state_matrix
+        state_matrix : (no_states, Hprime) ndarray
+            latent variable states taken into account during the em algorithm
+    """
         Model.__init__(self, comm)
         self.to_learn = to_learn
 
