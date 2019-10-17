@@ -23,6 +23,43 @@ from prosper.utils.datalog import dlog
 from prosper.em.camodels import CAModel
 
 class BSC_ET(CAModel):
+    """Binary Sparse Coding
+
+    Implements learning and inference of a Binary Sparse coding model under a variational approximation
+
+    Attributes
+    ----------
+    comm : MPI communicator
+    D : int
+        number of features
+    gamma : int
+        approximation parameter for maximum number of non-zero states
+    H : int
+        number of latent variables
+    Hprime : int
+        approximation parameter for latent space trunctation
+    K : int
+        number of different values the latent variables can take
+    no_states : (..., Hprime) ndarray  
+        number of different states of latent variables except singleton states and zero state
+    single_state_matrix : ((K-1)*H, H) ndarray
+        matrix that holds all possible singleton states
+    state_abs : (no_states, ) ndarray
+        number of non-zero elements in the rows of the state_matrix
+    state_matrix : (no_states, Hprime) ndarray
+        latent variable states taken into account during the em algorithm
+    states : (K,) ndarray
+        the differnt values that a latent variable can take must include 0 and one more integer
+    to_learn : list
+        list of strings included in model_params.keys() that specify which parameters are going to be optimized
+
+    References
+    ----------
+    [1] M. Henniges, G. Puertas, J. Bornschein, J. Eggert, and J. Lücke (2010). Binary Sparse Coding. Proc. LVA/ICA 2010, LNCS 6365, 450-457.
+
+    [2] J. Lücke and J. Eggert (2010). Expectation Truncation and the Benefits of Preselection in Training Generative Models. Journal of Machine Learning Research 11:2855-2900.
+
+    """
     def __init__(self, D, H, Hprime, gamma, to_learn=['W', 'pi', 'sigma'], comm=MPI.COMM_WORLD):
         CAModel.__init__(self, D, H, Hprime, gamma, to_learn, comm)
 

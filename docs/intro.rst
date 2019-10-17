@@ -1,32 +1,66 @@
-
+************
 Introduction
-============
+************
 
-This package provides a simple Python framework to implement Expectation
-Maxmimization (EM) based massive parallel machine leraning algorithms.
+This package contains all the source code to reproduce the numerical
+experiments described in the paper. It contains a parallelized implementation
+of the Binary Sparse Coding (BSC) [1], Gaussian Sparse Coding (GSC) [2], 
+Maximum Causes Analysis (MCA) [3], Maximum Magnitude Causes Analysis (MMCA) [4], 
+Ternary Sparse Coding (TSC) [5], and Discrete Sparse Coding [7] models. All these probabilistic generative models 
+are trained using a truncated Expectation Maximization (EM) algorithm [6].
 
-ToDo: The focus of this library is to allow rapid prototyping of algorithms
-while at the same time providing a high degree of scalability.
+Software dependencies
+=====================
+ 
+Python related dependencies can be installed using:
 
+.. code-block::bash
+
+	$ pip install -r requirements.txt
+
+
+MPI4PY also requires a system level installation of MPI. 
+You can do that on MacOS using Homebrew:
+
+.. code-block::bash
+
+	$ brew install mpich
+
+for Ubuntu systems:
+
+.. code-block::bash
+
+	$ sudo apt install mpich
+
+for any other system you might wish to review the relevent section of the MPI4PY [installation guidelines](https://mpi4py.readthedocs.io/en/stable/appendix.html#building-mpi)
 
 Installation 
 ============
 
 The recommended approch to install the framework is to obtain 
-the most recent stable version from `bitbucket.org`:
+the most recent stable version from `github.com`:
 
 .. code-block:: bash
 
-    git checkout https://bitbucket.org/mlold/pylib.git
-    cd pylib
-    python setup.py develop --user
+	$ git clone git@github.com:mlold/prosper.git
+	$ cd prosper
+	$ python setup.py install
 
 After installation you should run the testsuite to ensure all neccessary 
 dependencies are installed correctly and that everyting works as expected:
 
 .. code-block:: bash
 
-    nosetests -v
+	$ nosetests -v
+
+
+Optionally you can replace the final line with:
+
+.. code-block:: bash
+
+	$ python setup.py develop
+
+This option installs the library using links and it allows the user to edit the library without reinstalling it (useful for Prosper developers).
 
 
 Running examples 
@@ -39,7 +73,79 @@ Create some artifical training data by running `bars-create-data.py`:
 
 .. code-block:: bash
 
-    cd examples/barstests
-    python bars-create-data.py
+	$ cd examples/barstests
+	$ python bars-learnign-and-inference.py param-bars-<...>.py
 
-ToDo: this does not work right now.
+where <...> should be appropriately replaced to correspond to one of the parameter 
+files available in the directory. The bars-run-all.py script should then initialize 
+and run the algorithm which corresponds to the chosen parameter file. 
+
+
+Results/Output
+--------------
+
+The results produced by the code are stored in a 'results.h5' file 
+under "./output/.../". The file stores the model parameters (e.g., W, pi etc.) 
+for each EM iteration performed. To read the results file, you can use
+openFile function of the standard tables package in python. Moreover, the
+results files can also be easily read by other packages such as Matlab etc.
+
+
+Running on a parallel architecture
+==================================
+
+The code uses MPI based parallelization. If you have parallel resources
+(i.e., a multi-core system or a compute cluster), the provided code can make a 
+use of parallel compute resources by evenly distributing the training data 
+among multiple cores.
+
+To run the same script as above, e.g., 
+
+a) On a multi-core machine with 32 cores:
+
+.. code-block:: bash
+
+	$ mpirun -np 32 bars-learning-and-inference.py param-bars-<...>.py
+
+b) On a cluster:
+
+.. code-block:: bash
+
+	$ mpirun --hostfile machines python bars-learning-and-inference.py param-bars-<...>.py
+
+where 'machines' contains a list of suitable machines.
+
+See your MPI documentation for the details on how to start MPI parallelized 
+programs.
+
+
+References
+==========
+
+[1] M. Henniges, G. Puertas, J. Bornschein, J. Eggert, and J. Lücke (2010).
+Binary Sparse Coding.
+Proc. LVA/ICA 2010, LNCS 6365, 450-457. 
+
+[2] A.-S. Sheikh, J. A. Shelton, J. Lücke (2014).
+A Truncated EM Approach for Spike-and-Slab Sparse Coding.
+Journal of Machine Learning Research, 15:2653-2687. 
+
+[3] G. Puertas, J. Bornschein, and J. Lücke (2010). 
+The Maximal Causes of Natural Scenes are Edge Filters.
+Advances in Neural Information Processing Systems 23, 1939-1947. 
+
+[4] J. Bornschein, M. Henniges, J. Lücke (2013).
+Are V1 simple cells optimized for visual occlusions? A comparative study.
+PLOS Computational Biology 9(6): e1003062.
+
+[5] G. Exarchakis, M. Henniges, J. Eggert, and J. Lücke (2012).
+Ternary Sparse Coding.
+International Conference on Latent Variable Analysis and Signal Separation (LVA/ICA), 204-212. 
+
+[6] J. Lücke and J. Eggert (2010). 
+Expectation Truncation and the Benefits of Preselection in Training Generative Models.
+Journal of Machine Learning Research 11:2855-2900. 
+
+[7] G. Exarchakis, and J. Lücke (2017).
+Discrete Sparse Coding.
+Neural Computation, 29(11), 2979-3013.

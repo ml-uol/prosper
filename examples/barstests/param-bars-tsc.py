@@ -17,8 +17,8 @@ Hprime = 7
 gamma = 5
  
 # Import and instantiate a model
-from prosper.em.camodels.tsc_et import Ternary_ET
-model = Ternary_ET(D, H, Hprime, gamma)
+from prosper.em.camodels.tsc_et import TSC_ET
+model = TSC_ET(D, H, Hprime, gamma)
 
 
 # Ground truth parameters. Only used to generate training data.
