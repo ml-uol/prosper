@@ -43,17 +43,17 @@ def np_product(iterable,repeat=2):
         np.indices((len(iterable),) * repeat), 0, repeat )
         .reshape(-1, repeat)]
 
-def get_states(states, Hprime, gamma):
-    tmp = np.array(list(itls.product(states, repeat=Hprime)))
-    c1 = (np.sum(tmp != 0, 1) <= gamma) * (np.sum(tmp != 0, 1) > 1)
-    return tmp[c1]
+#def get_states(states, Hprime, gamma):
+#    tmp = np.array(list(itls.product(states, repeat=Hprime)))
+#    c1 = (np.sum(tmp != 0, 1) <= gamma) * (np.sum(tmp != 0, 1) > 1)
+#    return tmp[c1]
 
 def get_states_np(states, Hprime, gamma):
     tmp = np_product(states, repeat=Hprime)
     c1 = (np.sum(tmp != 0, 1) <= gamma) * (np.sum(tmp != 0, 1) > 1)
     return tmp[c1]
 
-def get_states2(states, Hprime, gamma):
+def get_states(states, Hprime, gamma):
     # assert type(states)==np.array
     assert len(states.shape)==1
     pd = itls.product(states, repeat=Hprime)
@@ -542,6 +542,7 @@ class DSC_ET(CAModel):
         # Allocate return structures
         F       =   np.empty( [my_N, 1 + (self.K-1)*H + self.no_states] )
         pre_F   =   np.empty( [1 + (self.K-1)*H + self.no_states] )
+        
         # Iterate over all datapoints
 
         ################ Identify Inference Latent vectors##############
@@ -651,7 +652,7 @@ class DSC_ET(CAModel):
         pjb_all   = np.exp(logpj_all - corr_all[:, None])  # shape: (my_N, no_states)
 
         #Log-Likelihood:
-        L = self.get_likelihood(D,sigma,A_pi_gamma,logpj_all,N_use)
+        L = self.get_likelihood(D,sigma,logpj_all,N_use)
         dlog.append('L',L)
         # Allocate
         my_Wp     = np.zeros_like(W)   # shape (H, D)
@@ -661,6 +662,7 @@ class DSC_ET(CAModel):
         SM = self.state_matrix
         SSM = self.single_state_matrix
 
+        
         # Iterate over all datapoints
         for n in range(my_N):
             y = my_y[n, :]                  # length D
@@ -1048,7 +1050,7 @@ class DSC_ET(CAModel):
         if not logprob:
             res['m'] = np.exp(res['m'])
 
-        comm.Barrier()
+        #comm.Barrier()
 
         self.Hprime, self.gamma = Hprime_start, gamma_start
         self.no_states, self.state_matrix, self.state_abs = generate_state_matrix(self.Hprime, self.gamma, self.states)
